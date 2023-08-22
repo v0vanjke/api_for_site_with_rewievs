@@ -1,26 +1,20 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, mixins, viewsets
-from rest_framework.pagination import LimitOffsetPagination
-from rest_framework.permissions import IsAuthenticated
+from rest_framework import viewsets
 
-from api.serializers import (CommentSerializer, FollowSerializer,
-                             GroupSerializer, PostSerializer)
-from .models import Review, ReviewComment, User
+from api.serializers import (ReviewSerializer, ReviewCommentSerializer)
+from review.models import Review, ReviewComment, User
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.all()
-    serializer_class = PostSerializer
-    # permission_classes = (AuthenticatedIsAuthorOrReadOnlyPermission,)
-    # pagination_class = LimitOffsetPagination
+    serializer_class = ReviewSerializer
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
 
 class ReviewCommentViewSet(viewsets.ModelViewSet):
-    serializer_class = CommentSerializer
-    # permission_classes = (AuthenticatedIsAuthorOrReadOnlyPermission,)
+    serializer_class = ReviewCommentSerializer
 
     def perform_create(self, serializer):
         review = get_object_or_404(Review, pk=self.kwargs['id'])
