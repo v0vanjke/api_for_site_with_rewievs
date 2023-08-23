@@ -2,7 +2,7 @@ from rest_framework import serializers, validators
 from rest_framework.relations import SlugRelatedField
 from rest_framework.exceptions import ValidationError
 
-from reviews.models import Review, ReviewComment
+from reviews.models import Review, ReviewComment, Category, Genre, Title
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -39,3 +39,45 @@ class ReviewCommentSerializer(serializers.ModelSerializer):
     class Meta:
         fields = '__all__'
         model = ReviewComment
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        exclude = ('id', )
+        model = Category
+
+
+class GenreSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        exclude = ('id', )
+        model = Genre
+
+
+class TitleGetSerializer(serializers.ModelSerializer):
+    category = CategorySerializer(read_only=True)
+    genre = GenreSerializer(
+        read_only=True,
+        many=True
+    )
+    rating = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        fields = '__all__'
+        model = Title
+
+
+class TitlePostSerializer(serializers.ModelSerializer):
+    category = serializers.SlugRelatedField(
+        queryset=Category.objects.all(),
+        slug_field='slug'
+    )
+    genre = serializers.SlugRelatedField(
+        queryset=Genre.objects.all(),
+        slug_field='slug',
+        many=True
+    )
+
+    class Meta:
+        fields = '__all__'
+        model = Title
