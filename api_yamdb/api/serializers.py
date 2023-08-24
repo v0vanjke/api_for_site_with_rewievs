@@ -2,7 +2,55 @@ from rest_framework import serializers, validators
 from rest_framework.relations import SlugRelatedField
 from rest_framework.exceptions import ValidationError
 
-from reviews.models import Review, ReviewComment, Category, Genre, Title
+from reviews.models import Review, ReviewComment, Category, Genre, Title, User
+
+
+class ConfirmationCodeSerializer(serializers.Serializer):
+    """Сериализатор для получения кода подтверждения"""
+    username = serializers.CharField(required=True)
+    email = serializers.EmailField(required=True)
+
+
+class UserSerializer(serializers.ModelSerializer):
+    """Сериализатор для пользователей"""
+    class Meta:
+        model = User
+        fields = (
+            'username', 'email', 'first_name',
+            'last_name', 'bio', 'role'
+        )
+
+
+class SignUpSerializer(serializers.ModelSerializer):
+    """Сериализатор для регистрации пользоваталей"""
+    class Meta:
+        model = User
+        fields = ['email', 'username']
+
+    def validate_username(self, value):
+        if value == 'me':
+            raise serializers.ValidationError('Имя пользователя недоступно')
+        return value
+
+    def create(self, validated_data):
+        user = User.objects.create(
+            username=self.validated_data['username'],
+            email=self.validated_data['email'],
+        )
+        return user
+
+
+class TokenSerializer(serializers.Serializer):
+    """Сериализатор для получения токена"""
+    username = serializers.CharField(required=True)
+    confirmation_code = serializers.CharField(required=True)
+
+    class Meta:
+        model = User
+        fields = (
+            'username',
+            'confirmation_code'
+        )
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -81,3 +129,4 @@ class TitlePostSerializer(serializers.ModelSerializer):
     class Meta:
         fields = '__all__'
         model = Title
+

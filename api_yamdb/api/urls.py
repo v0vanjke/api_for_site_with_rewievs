@@ -1,7 +1,8 @@
 from django.urls import include, path
 from rest_framework import routers
 
-from api.views import ReviewViewSet, ReviewCommentViewSet
+from api.views import (ReviewViewSet, ReviewCommentViewSet,
+                       sent_confirmation_code)
 
 routerv1 = routers.DefaultRouter()
 routerv1.register(
@@ -17,4 +18,6 @@ routerv1.register(
 
 urlpatterns = [
     path('v1/', include(routerv1.urls)),
+    path('api/v1/auth/signup/', sent_confirmation_code, name='signup'),
+    path('api/v1/auth/token/', sent_confirmation_code, name='token'),
 ]
