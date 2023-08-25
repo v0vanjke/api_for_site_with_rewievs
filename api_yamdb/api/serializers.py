@@ -24,7 +24,8 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         if data['score'] not in range(1, 11):
-            raise ValidationError('Оценка должна быть целым значением от 1 до 10.')
+            raise ValidationError(
+                'Оценка должна быть целым значением от 1 до 10.')
         return data
 
 
@@ -42,15 +43,18 @@ class ReviewCommentSerializer(serializers.ModelSerializer):
 
 
 class CategorySerializer(serializers.ModelSerializer):
+
     class Meta:
-        exclude = ('id', )
+        fields = ('name', 'slug')
+        lookup_field = 'slug'
         model = Category
 
 
 class GenreSerializer(serializers.ModelSerializer):
 
     class Meta:
-        exclude = ('id', )
+        fields = ('name', 'slug')
+        lookup_field = 'slug'
         model = Genre
 
 
