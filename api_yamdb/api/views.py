@@ -1,4 +1,3 @@
-import re
 from django.shortcuts import get_object_or_404
 from django.core.mail import send_mail
 from rest_framework import permissions, status, viewsets, filters
@@ -141,7 +140,8 @@ class ReviewCommentViewSet(viewsets.ModelViewSet):
         return review.comments.all()
 
 
-class CategoryViewSet(viewsets.ModelViewSet):
+class CategoryViewSet(mixins.ListModelMixin, mixins.CreateModelMixin,
+                      mixins.DestroyModelMixin, viewsets.GenericViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = (IsAdminOrReadOnly,)
@@ -149,7 +149,8 @@ class CategoryViewSet(viewsets.ModelViewSet):
     lookup_field = 'slug'
 
 
-class GenreViewSet(viewsets.ModelViewSet):
+class GenreViewSet(mixins.ListModelMixin, mixins.CreateModelMixin,
+                   mixins.DestroyModelMixin, viewsets.GenericViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
     permission_classes = (IsAdminOrReadOnly,)
@@ -157,6 +158,19 @@ class GenreViewSet(viewsets.ModelViewSet):
     lookup_field = 'slug'
 
 
-# class TitleViewSet(viewsets.ModelViewSet):
-    # queryset = Title.objects.all()
-    # пока не разобрался тут, еще в процессе)
+class TitleViewSet(viewsets.ModelViewSet):
+    queryset = (
+        Title.objects.prefetch_related(
+            "title_genre", "category").annotate(
+                rating=models.Avg("reviews__score")).order_by("id"))
+    serializer_class = TitleGetSerializer
+    pagination_class = PageNumberPagination
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = FilterTitles
+    search_fields = ('name', 'year', 'genre__slug', 'category__slug')
+    # permission_classes =
+
+    def get_serializer_class(self):
+        if self.request.method in SAFE_METHODS:
+            return TitleGetSerializer
+        return TitlePostSerializer

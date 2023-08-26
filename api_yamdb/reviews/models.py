@@ -88,7 +88,7 @@ class User(AbstractUser):
 
 class Genre(models.Model):
     name = models.CharField(
-        max_length=200, verbose_name='name'
+        max_length=256, verbose_name='name'
     )
     slug = models.SlugField(
         max_length=50, unique=True
@@ -103,7 +103,7 @@ class Genre(models.Model):
 
 class Category(models.Model):
     name = models.CharField(
-        max_length=200, verbose_name='name'
+        max_length=256, verbose_name='name'
     )
     slug = models.SlugField(
         max_length=50, unique=True
