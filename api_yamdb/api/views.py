@@ -1,6 +1,6 @@
 from django.shortcuts import get_object_or_404
 from django.core.mail import send_mail
-from rest_framework import permissions, status, viewsets, filters
+from rest_framework import permissions, status, viewsets, filters, mixins
 from rest_framework.views import APIView
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
@@ -9,17 +9,20 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from rest_framework_simplejwt.tokens import AccessToken
-from django.core.mail import EmailMessage
 from django.contrib.auth.tokens import default_token_generator
 from api.serializers import (ReviewSerializer, ReviewCommentSerializer,
                              CategorySerializer, GenreSerializer,
                              SignUpSerializer, UserSerializer,
-                             TokenSerializer,
+                             TokenSerializer, TitleGetSerializer, TitlePostSerializer,
                              )
 from .permissions import (IsAdminOrReadOnly, IsAuthorOrReadOnly,
                           IsModeratorOrReadOnly, IsOwnerOrIsAdmin)
 from reviews.models import Review, ReviewComment, User, Title, Genre, Category
 from api_yamdb.settings import DEFAULT_FROM_EMAIL
+from django.db import models
+from django_filters.rest_framework import DjangoFilterBackend
+from api.filters import FilterTitles
+import re
 
 
 class TokenView(APIView):
@@ -160,8 +163,7 @@ class GenreViewSet(mixins.ListModelMixin, mixins.CreateModelMixin,
 
 class TitleViewSet(viewsets.ModelViewSet):
     queryset = (
-        Title.objects.prefetch_related(
-            "title_genre", "category").annotate(
+        Title.objects.annotate(
                 rating=models.Avg("reviews__score")).order_by("id"))
     serializer_class = TitleGetSerializer
     pagination_class = PageNumberPagination
