@@ -1,9 +1,113 @@
+import re
 from django.shortcuts import get_object_or_404
-from rest_framework import viewsets
-
+from django.core.mail import send_mail
+from rest_framework import permissions, status, viewsets, filters
+from rest_framework.views import APIView
+from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.response import Response
+from django.db import IntegrityError
+from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.pagination import PageNumberPagination
+from rest_framework_simplejwt.tokens import AccessToken
+from django.core.mail import EmailMessage
+from django.contrib.auth.tokens import default_token_generator
 from api.serializers import (ReviewSerializer, ReviewCommentSerializer,
-                             CategorySerializer, GenreSerializer)
+                             CategorySerializer, GenreSerializer,
+                             SignUpSerializer, UserSerializer,
+                             TokenSerializer,
+                             )
+from .permissions import (IsAdminOrReadOnly, IsAuthorOrReadOnly,
+                          IsModeratorOrReadOnly, IsOwnerOrIsAdmin)
 from reviews.models import Review, ReviewComment, User, Title, Genre, Category
+from api_yamdb.settings import DEFAULT_FROM_EMAIL
+
+
+class TokenView(APIView):
+    permission_classes = (AllowAny,)
+
+    def post(self, request):
+        serializer = TokenSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        username = serializer.validated_data['username']
+        user = get_object_or_404(User, username=username)
+        confirmation_code = serializer.data['confirmation_code']
+        if not default_token_generator.check_token(user, confirmation_code):
+            return Response(
+                serializer.errors,
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        token = AccessToken.for_user(user)
+        return Response(
+            {'token': str(token)}, status=status.HTTP_200_OK
+        )
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = (IsOwnerOrIsAdmin, )
+    lookup_field = 'username'
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('username',)
+
+    @action(methods=['put'], detail=True)
+    def disallow_put(self, request, *args, **kwargs):
+        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    @action(
+        methods=['get', 'patch'],
+        url_path='me',
+        detail=False,
+        permission_classes=[IsAuthenticated]
+    )
+    def me(self, request):
+        if request.method == 'GET':
+            serializer = UserSerializer(self.request.user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        serializer = UserSerializer(
+            self.request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(role=self.request.user.role)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class SignUpView(APIView):
+    queryset = User.objects.all()
+    serializer_class = SignUpSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = SignUpSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        username = serializer.validated_data['username']
+        if not re.match(r'^[a-zA-Z0-9_]+$', username):
+            return Response(
+                {'detail': 'Имя пользователя должно содержать только буквы, цифры и подчеркивания.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        email = serializer.validated_data['email']
+        try:
+            user, _ = User.objects.get_or_create(
+                username=username,
+                email=email
+            )
+        except IntegrityError:
+            raise ValidationError(
+                'Имя пользователя или email уже используются',
+                status.HTTP_400_BAD_REQUEST
+            )
+        
+        confirmation_code = default_token_generator.make_token(user)
+        send_mail(
+            subject='Код подтверждения',
+            message=f'Ваш код подтверждения: {confirmation_code}',
+            from_email=DEFAULT_FROM_EMAIL,
+            recipient_list=[user.email]
+        )
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
@@ -32,6 +136,7 @@ class ReviewCommentViewSet(viewsets.ModelViewSet):
         )
 
     def get_queryset(self):
+
         review = get_object_or_404(Review, pk=self.kwargs['review_id'])
         return review.comments.all()
 
@@ -39,7 +144,7 @@ class ReviewCommentViewSet(viewsets.ModelViewSet):
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    # permission_classes =
+    permission_classes = (IsAdminOrReadOnly,)
     search_fields = ('name', )
     lookup_field = 'slug'
 
@@ -47,7 +152,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
 class GenreViewSet(viewsets.ModelViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-    # permission_classes =
+    permission_classes = (IsAdminOrReadOnly,)
     search_fields = ('name', )
     lookup_field = 'slug'
 

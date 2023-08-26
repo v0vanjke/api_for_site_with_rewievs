@@ -1,8 +1,99 @@
+import re
 from rest_framework import serializers, validators
 from rest_framework.relations import SlugRelatedField
 from rest_framework.exceptions import ValidationError
+from django.shortcuts import get_object_or_404
+from rest_framework_simplejwt.tokens import RefreshToken
+from reviews.models import (Review, ReviewComment, Category, Genre, Title,
+                            User, EMAIL_LENGTH, USERNAME_LENGTH)
 
-from reviews.models import Review, ReviewComment, Category, Genre, Title
+
+class UserSerializer(serializers.ModelSerializer):
+    """Сериализатор для пользователей"""
+    username = serializers.CharField(
+        required=True,
+        max_length=USERNAME_LENGTH,
+    )
+    email = serializers.EmailField(required=True, max_length=EMAIL_LENGTH)
+
+    def validate_username(self, value):
+        if not re.match(r'^[a-zA-Z0-9_]+$', value):
+            raise serializers.ValidationError(
+                'Имя пользователя должно содержать только буквы, цифры и подчеркивания.'
+            )
+        return value
+
+    def create(self, validated_data):
+        username = validated_data.get('username')
+        email = validated_data.get('email')
+
+        # Проверяем существующего пользователя с таким username и email
+        existing_user_by_username = User.objects.filter(username=username).first()
+        if existing_user_by_username:
+            raise serializers.ValidationError(
+                'Пользователь с таким именем пользователя уже существует.'
+            )
+
+        existing_user_by_email = User.objects.filter(email=email).first()
+        if existing_user_by_email:
+            raise serializers.ValidationError(
+                'Пользователь с таким email уже существует.'
+            )
+
+        user = User(username=username, email=email)
+        user.save()
+        return user
+
+    class Meta:
+        model = User
+        fields = (
+            'username', 'email', 'first_name',
+            'last_name', 'bio', 'role'
+        )
+
+
+class SignUpSerializer(serializers.ModelSerializer):
+    """Сериализатор для регистрации пользоваталей"""
+    username = serializers.CharField(
+        required=True,
+        max_length=USERNAME_LENGTH,
+    )
+    email = serializers.EmailField(required=True, max_length=EMAIL_LENGTH)
+
+    class Meta:
+        model = User
+        fields = ['email', 'username']
+
+    def create(self, validated_data):
+        user = User.objects.create(
+            username=self.validated_data['username'],
+            email=self.validated_data['email'],
+        )
+        return user
+
+    def validate_username(self, value):
+        if value == 'me':
+            raise serializers.ValidationError('Имя пользователя недоступно')
+        return value
+
+
+class TokenSerializer(serializers.Serializer):
+    """Сериализатор для получения токена"""
+    username = serializers.CharField(required=True, max_length=USERNAME_LENGTH)
+    confirmation_code = serializers.CharField(required=True)
+
+    def validate_code(self, data):
+        user = get_object_or_404(User, username=data['username'])
+        if user.confirmation_code != data['confirmation_code']:
+            raise serializers.ValidationError('Неверный код подтерждения')
+        return RefreshToken.for_user(user).access_token
+
+    class Meta:
+        model = User
+        fields = (
+            'username',
+            'confirmation_code'
+        )
 
 
 class ReviewSerializer(serializers.ModelSerializer):
