@@ -109,7 +109,7 @@ class SignUpView(APIView):
             from_email=DEFAULT_FROM_EMAIL,
             recipient_list=[user.email]
         )
-        return Response(confirmation_code, status=status.HTTP_200_OK)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
