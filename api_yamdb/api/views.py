@@ -138,7 +138,6 @@ class ReviewCommentViewSet(viewsets.ModelViewSet):
         )
 
     def get_queryset(self):
-
         review = get_object_or_404(Review, pk=self.kwargs['review_id'])
         return review.comments.all()
 
