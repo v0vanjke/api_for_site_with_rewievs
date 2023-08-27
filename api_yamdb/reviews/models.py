@@ -1,10 +1,6 @@
-from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
-from rest_framework import serializers
 from django.db import models
-
-#User = get_user_model()
 
 
 USERNAME_LENGTH = 150
@@ -75,7 +71,7 @@ class User(AbstractUser):
 
     @property
     def is_admin(self):
-        return (self.role == self.ADMIN or self.is_superuser)
+        return self.role == self.ADMIN or self.is_superuser
 
     @property
     def is_moderator(self):

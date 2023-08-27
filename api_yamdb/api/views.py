@@ -114,6 +114,7 @@ class SignUpView(APIView):
 
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
+    permission_classes = (IsAuthorOrReadOnly,)
 
     def perform_create(self, serializer):
         title = get_object_or_404(Title, pk=self.kwargs['title_id'])
@@ -173,6 +174,6 @@ class TitleViewSet(viewsets.ModelViewSet):
     # permission_classes =
 
     def get_serializer_class(self):
-        if self.request.method in SAFE_METHODS:
+        if self.request.method in permissions.SAFE_METHODS:
             return TitleGetSerializer
         return TitlePostSerializer
