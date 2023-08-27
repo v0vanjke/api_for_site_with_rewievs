@@ -114,7 +114,6 @@ class SignUpView(APIView):
 
 class ReviewViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewSerializer
-    permission_classes = (IsAuthorOrReadOnly,)
 
     def perform_create(self, serializer):
         title = get_object_or_404(Title, pk=self.kwargs['title_id'])
@@ -148,7 +147,6 @@ class CategoryViewSet(mixins.ListModelMixin, mixins.CreateModelMixin,
                       mixins.DestroyModelMixin, viewsets.GenericViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = (IsAdminOrReadOnly,)
     search_fields = ('name', )
     lookup_field = 'slug'
 
@@ -157,7 +155,6 @@ class GenreViewSet(mixins.ListModelMixin, mixins.CreateModelMixin,
                    mixins.DestroyModelMixin, viewsets.GenericViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-    permission_classes = (IsAdminOrReadOnly,)
     search_fields = ('name', )
     lookup_field = 'slug'
 
