@@ -14,8 +14,8 @@ from api.serializers import (ReviewSerializer, ReviewCommentSerializer,
                              CategorySerializer, GenreSerializer,
                              SignUpSerializer, UserSerializer,
                              TokenSerializer, TitleGetSerializer, TitlePostSerializer,
-                             )
-from .permissions import (IsAdminOrReadOnly, IsAuthorOrReadOnly,
+                             ReviewPostSerializer,)
+from .permissions import (IsOwnerOrIsAdminOrIsModerator, IsAuthorOrReadOnly,
                           IsModeratorOrReadOnly, IsOwnerOrIsAdmin)
 from reviews.models import Review, ReviewComment, User, Title, Genre, Category
 from api_yamdb.settings import DEFAULT_FROM_EMAIL
@@ -109,18 +109,26 @@ class SignUpView(APIView):
             from_email=DEFAULT_FROM_EMAIL,
             recipient_list=[user.email]
         )
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(confirmation_code, status=status.HTTP_200_OK)
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
-    serializer_class = ReviewSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return ReviewPostSerializer
+        return ReviewSerializer
+
+    def get_permissions(self):
+        if self.action in ['update', 'partial_update', 'destroy']:
+            return (IsOwnerOrIsAdminOrIsModerator(),)
+        elif self.action in ['retrieve', 'list']:
+            return (AllowAny(),)
+        return (IsAuthenticated(),)
 
     def perform_create(self, serializer):
         title = get_object_or_404(Title, pk=self.kwargs['title_id'])
-        serializer.save(
-            title=title,
-            author=self.request.user,
-        )
+        serializer.save(title=title, author=self.request.user,)
 
     def get_queryset(self):
         title = get_object_or_404(Title, pk=self.kwargs['title_id'])
@@ -129,6 +137,13 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
 class ReviewCommentViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewCommentSerializer
+
+    def get_permissions(self):
+        if self.action in ['update', 'partial_update', 'destroy']:
+            return (IsOwnerOrIsAdminOrIsModerator(),)
+        elif self.action in ['retrieve', 'list']:
+            return (AllowAny(),)
+        return (IsAuthenticated(),)
 
     def perform_create(self, serializer):
         review = get_object_or_404(Review, pk=self.kwargs['review_id'])
