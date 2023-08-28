@@ -16,8 +16,8 @@ from api.serializers import (ReviewSerializer, ReviewCommentSerializer,
                              TokenSerializer, TitleGetSerializer,
                              TitlePostSerializer, ReviewPostSerializer,)
 from .permissions import (IsOwnerOrIsAdminOrIsModerator, IsOwnerOrIsAdmin,
-                          sAdminOrReadOnly)
-from reviews.models import Review, ReviewComment, User, Title, Genre, Category
+                          IsAdminOrReadOnly,)
+from reviews.models import Review, User, Title, Genre, Category
 from api_yamdb.settings import DEFAULT_FROM_EMAIL
 from django.db import models
 from django_filters.rest_framework import DjangoFilterBackend
@@ -185,7 +185,11 @@ class GenreViewSet(mixins.ListModelMixin, mixins.CreateModelMixin,
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.annotate(rating=models.Avg("reviews__score")).order_by("id")
+    queryset = (
+        Title.objects
+        .annotate(rating=models.Avg("reviews__score"))
+        .order_by("id")
+    )
     serializer_class = TitleGetSerializer
     pagination_class = PageNumberPagination
     filter_backends = (DjangoFilterBackend,)

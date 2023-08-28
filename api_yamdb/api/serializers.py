@@ -9,7 +9,9 @@ import re
 
 
 class UserSerializer(serializers.ModelSerializer):
-    """Сериализатор для пользователей"""
+    """
+    Сериализатор для пользователей
+    """
     username = serializers.CharField(
         required=True,
         max_length=USERNAME_LENGTH,
@@ -68,7 +70,9 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class SignUpSerializer(serializers.ModelSerializer):
-    """Сериализатор для регистрации пользоваталей"""
+    """
+    Сериализатор для регистрации пользоваталей
+    """
     username = serializers.CharField(
         required=True,
         max_length=USERNAME_LENGTH,
@@ -93,7 +97,9 @@ class SignUpSerializer(serializers.ModelSerializer):
 
 
 class TokenSerializer(serializers.Serializer):
-    """Сериализатор для получения токена"""
+    """
+    Сериализатор для получения токена
+    """
     username = serializers.CharField(required=True, max_length=USERNAME_LENGTH)
     confirmation_code = serializers.CharField(required=True)
 
@@ -112,6 +118,9 @@ class TokenSerializer(serializers.Serializer):
 
 
 class ReviewPostSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для отзыва
+    """
     author = SlugRelatedField(slug_field='username', read_only=True)
     title = serializers.PrimaryKeyRelatedField(
         read_only=True,
@@ -138,6 +147,9 @@ class ReviewPostSerializer(serializers.ModelSerializer):
 
 
 class ReviewSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для отзыва на произведение.
+    """
     author = SlugRelatedField(slug_field='username', read_only=True)
     title = serializers.PrimaryKeyRelatedField(
         read_only=True,
@@ -149,6 +161,9 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 
 class ReviewCommentSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для комментария к отзыву на произведение.
+    """
     author = SlugRelatedField(
         read_only=True, slug_field='username'
     )
@@ -162,6 +177,9 @@ class ReviewCommentSerializer(serializers.ModelSerializer):
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для категории произведения.
+    """
 
     class Meta:
         fields = ('name', 'slug')
@@ -170,6 +188,9 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class GenreSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для жанра произведения.
+    """
 
     class Meta:
         fields = ('name', 'slug')
@@ -178,6 +199,10 @@ class GenreSerializer(serializers.ModelSerializer):
 
 
 class TitleGetSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для получения данных о произведении.
+    """
+
     category = CategorySerializer(read_only=True)
     genre = GenreSerializer(
         read_only=True,
@@ -191,6 +216,10 @@ class TitleGetSerializer(serializers.ModelSerializer):
 
 
 class TitlePostSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для создания произведения.
+    """
+
     category = serializers.SlugRelatedField(
         queryset=Category.objects.all(),
         slug_field='slug'
