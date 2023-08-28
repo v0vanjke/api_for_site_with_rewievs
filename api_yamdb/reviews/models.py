@@ -1,10 +1,6 @@
-from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
-from rest_framework import serializers
 from django.db import models
-
-#User = get_user_model()
 
 
 USERNAME_LENGTH = 150
@@ -32,13 +28,14 @@ class User(AbstractUser):
     email = models.EmailField(
         verbose_name='Электронная почта',
         unique=True,
-        null=False,
+        null=True,
         blank=False,
     )
     first_name = models.CharField(
         verbose_name='Имя',
         max_length=150,
         blank=True,
+        null=False,
     )
     last_name = models.CharField(
         verbose_name='Фамилия',
@@ -88,7 +85,7 @@ class User(AbstractUser):
 
 class Genre(models.Model):
     name = models.CharField(
-        max_length=200, verbose_name='name'
+        max_length=256, verbose_name='name'
     )
     slug = models.SlugField(
         max_length=50, unique=True
@@ -103,7 +100,7 @@ class Genre(models.Model):
 
 class Category(models.Model):
     name = models.CharField(
-        max_length=200, verbose_name='name'
+        max_length=256, verbose_name='name'
     )
     slug = models.SlugField(
         max_length=50, unique=True

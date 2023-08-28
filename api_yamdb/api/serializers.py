@@ -19,16 +19,24 @@ class UserSerializer(serializers.ModelSerializer):
     def validate_username(self, value):
         if not re.match(r'^[a-zA-Z0-9_]+$', value):
             raise serializers.ValidationError(
-                'Имя пользователя должно содержать только буквы, цифры и подчеркивания.'
+                'Имя пользователя должно содержать только',
+                'буквы, цифры и подчеркивания.'
             )
         return value
 
     def create(self, validated_data):
         username = validated_data.get('username')
         email = validated_data.get('email')
+        first_name = validated_data.get('first_name', '')
+        last_name = validated_data.get('last_name', '')
+        bio = validated_data.get('bio', '')
+        role = validated_data.get('role', User.USER)
 
-        # Проверяем существующего пользователя с таким username и email
-        existing_user_by_username = User.objects.filter(username=username).first()
+        existing_user_by_username = (
+            User.objects
+            .filter(username=username)
+            .first()
+        )
         if existing_user_by_username:
             raise serializers.ValidationError(
                 'Пользователь с таким именем пользователя уже существует.'
@@ -40,7 +48,14 @@ class UserSerializer(serializers.ModelSerializer):
                 'Пользователь с таким email уже существует.'
             )
 
-        user = User(username=username, email=email)
+        user = User(
+            username=username,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            bio=bio,
+            role=role
+        )
         user.save()
         return user
 
@@ -96,6 +111,31 @@ class TokenSerializer(serializers.Serializer):
         )
 
 
+class ReviewPostSerializer(serializers.ModelSerializer):
+    author = SlugRelatedField(slug_field='username', read_only=True)
+    title = serializers.PrimaryKeyRelatedField(
+        read_only=True,
+    )
+
+    class Meta:
+        fields = '__all__'
+        model = Review
+
+    def validate_score(self, score):
+        if score not in range(1, 11):
+            raise ValidationError(
+                'Оценка должна быть целым значением от 1 до 10.')
+        return score
+
+    def validate(self, data):
+        if Review.objects.filter(
+                author=self.context['request'].user,
+                title=self.context['view'].kwargs['title_id']
+        ).exists():
+            raise serializers.ValidationError('Можно оставить только один отзыв к произведению!')
+        return data
+
+
 class ReviewSerializer(serializers.ModelSerializer):
     author = SlugRelatedField(slug_field='username', read_only=True)
     title = serializers.PrimaryKeyRelatedField(
@@ -105,18 +145,6 @@ class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         fields = '__all__'
         model = Review
-        validators = [
-            validators.UniqueTogetherValidator(
-                queryset=Review.objects.all(),
-                fields=('author', 'title')
-            ),
-
-        ]
-
-    def validate(self, data):
-        if data['score'] not in range(1, 11):
-            raise ValidationError('Оценка должна быть целым значением от 1 до 10.')
-        return data
 
 
 class ReviewCommentSerializer(serializers.ModelSerializer):
@@ -133,15 +161,18 @@ class ReviewCommentSerializer(serializers.ModelSerializer):
 
 
 class CategorySerializer(serializers.ModelSerializer):
+
     class Meta:
-        exclude = ('id', )
+        fields = ('name', 'slug')
+        lookup_field = 'slug'
         model = Category
 
 
 class GenreSerializer(serializers.ModelSerializer):
 
     class Meta:
-        exclude = ('id', )
+        fields = ('name', 'slug')
+        lookup_field = 'slug'
         model = Genre
 
 

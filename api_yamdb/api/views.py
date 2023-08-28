@@ -1,26 +1,29 @@
-import re
 from django.shortcuts import get_object_or_404
 from django.core.mail import send_mail
-from rest_framework import permissions, status, viewsets, filters
+from rest_framework import permissions, status, viewsets, filters, mixins
 from rest_framework.views import APIView
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
+from rest_framework import authentication
 from django.db import IntegrityError
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from rest_framework_simplejwt.tokens import AccessToken
-from django.core.mail import EmailMessage
 from django.contrib.auth.tokens import default_token_generator
 from api.serializers import (ReviewSerializer, ReviewCommentSerializer,
                              CategorySerializer, GenreSerializer,
                              SignUpSerializer, UserSerializer,
-                             TokenSerializer,
-                             )
-from .permissions import (IsAdminOrReadOnly, IsAuthorOrReadOnly,
+                             TokenSerializer, TitleGetSerializer, TitlePostSerializer,
+                             ReviewPostSerializer,)
+from .permissions import (IsOwnerOrIsAdminOrIsModerator, IsAdminOrReadOnly,
                           IsModeratorOrReadOnly, IsOwnerOrIsAdmin)
 from reviews.models import Review, ReviewComment, User, Title, Genre, Category
 from api_yamdb.settings import DEFAULT_FROM_EMAIL
+from django.db import models
+from django_filters.rest_framework import DjangoFilterBackend
+from api.filters import FilterTitles
+import re
 
 
 class TokenView(APIView):
@@ -51,9 +54,15 @@ class UserViewSet(viewsets.ModelViewSet):
     filter_backends = (filters.SearchFilter,)
     search_fields = ('username',)
 
-    @action(methods=['put'], detail=True)
-    def disallow_put(self, request, *args, **kwargs):
+    def update(self, request, *args, **kwargs):
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+    
+    def partial_update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = UserSerializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(role=instance.role)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(
         methods=['get', 'patch'],
@@ -84,7 +93,8 @@ class SignUpView(APIView):
         username = serializer.validated_data['username']
         if not re.match(r'^[a-zA-Z0-9_]+$', username):
             return Response(
-                {'detail': 'Имя пользователя должно содержать только буквы, цифры и подчеркивания.'},
+                {'detail': 'Имя пользователя должно содержать только'
+                 'буквы, цифры и подчеркивания.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
@@ -99,7 +109,7 @@ class SignUpView(APIView):
                 'Имя пользователя или email уже используются',
                 status.HTTP_400_BAD_REQUEST
             )
-        
+
         confirmation_code = default_token_generator.make_token(user)
         send_mail(
             subject='Код подтверждения',
@@ -111,14 +121,22 @@ class SignUpView(APIView):
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
-    serializer_class = ReviewSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return ReviewPostSerializer
+        return ReviewSerializer
+
+    def get_permissions(self):
+        if self.action in ['update', 'partial_update', 'destroy']:
+            return (IsOwnerOrIsAdminOrIsModerator(),)
+        elif self.action in ['retrieve', 'list']:
+            return (AllowAny(),)
+        return (IsAuthenticated(),)
 
     def perform_create(self, serializer):
         title = get_object_or_404(Title, pk=self.kwargs['title_id'])
-        serializer.save(
-            title=title,
-            author=self.request.user,
-        )
+        serializer.save(title=title, author=self.request.user,)
 
     def get_queryset(self):
         title = get_object_or_404(Title, pk=self.kwargs['title_id'])
@@ -128,6 +146,13 @@ class ReviewViewSet(viewsets.ModelViewSet):
 class ReviewCommentViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewCommentSerializer
 
+    def get_permissions(self):
+        if self.action in ['update', 'partial_update', 'destroy']:
+            return (IsOwnerOrIsAdminOrIsModerator(),)
+        elif self.action in ['retrieve', 'list']:
+            return (AllowAny(),)
+        return (IsAuthenticated(),)
+
     def perform_create(self, serializer):
         review = get_object_or_404(Review, pk=self.kwargs['review_id'])
         serializer.save(
@@ -136,27 +161,49 @@ class ReviewCommentViewSet(viewsets.ModelViewSet):
         )
 
     def get_queryset(self):
-
         review = get_object_or_404(Review, pk=self.kwargs['review_id'])
         return review.comments.all()
 
 
-class CategoryViewSet(viewsets.ModelViewSet):
+class CategoryViewSet(mixins.ListModelMixin, mixins.CreateModelMixin,
+                      mixins.DestroyModelMixin, viewsets.GenericViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = (IsAdminOrReadOnly,)
     search_fields = ('name', )
     lookup_field = 'slug'
 
 
-class GenreViewSet(viewsets.ModelViewSet):
+class GenreViewSet(mixins.ListModelMixin, mixins.CreateModelMixin,
+                   mixins.DestroyModelMixin, mixins.UpdateModelMixin,
+                   viewsets.GenericViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-    permission_classes = (IsAdminOrReadOnly,)
     search_fields = ('name', )
     lookup_field = 'slug'
+    permission_classes = (IsAdminOrReadOnly,)
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filterset_fields = ['name']
+
+    def get_permissions(self):
+        if self.action == 'create':
+            return [permissions.IsAuthenticated()]
+        elif self.action == 'partial_update':
+            return [permissions.IsAuthenticated()]
+        return []
 
 
-# class TitleViewSet(viewsets.ModelViewSet):
-    # queryset = Title.objects.all()
-    # пока не разобрался тут, еще в процессе)
+class TitleViewSet(viewsets.ModelViewSet):
+    queryset = (
+        Title.objects.annotate(
+                rating=models.Avg("reviews__score")).order_by("id"))
+    serializer_class = TitleGetSerializer
+    pagination_class = PageNumberPagination
+    filter_backends = (DjangoFilterBackend,)
+    filterset_class = FilterTitles
+    search_fields = ('name', 'year', 'genre__slug', 'category__slug')
+    # permission_classes =
+
+    def get_serializer_class(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return TitleGetSerializer
+        return TitlePostSerializer
