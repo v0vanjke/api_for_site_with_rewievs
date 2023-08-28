@@ -121,6 +121,7 @@ class SignUpView(APIView):
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
+    http_method_names = ['get', 'post', 'patch', 'delete']
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -132,8 +133,6 @@ class ReviewViewSet(viewsets.ModelViewSet):
             return (IsOwnerOrIsAdminOrIsModerator(),)
         elif self.action in ['retrieve', 'list']:
             return (AllowAny(),)
-        elif self.action == 'update':
-            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
         return (IsAuthenticated(),)
 
     def perform_create(self, serializer):
@@ -147,14 +146,13 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
 class ReviewCommentViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewCommentSerializer
+    http_method_names = ['get', 'post', 'patch', 'delete']
 
     def get_permissions(self):
         if self.action in ['partial_update', 'destroy']:
             return (IsOwnerOrIsAdminOrIsModerator(),)
         elif self.action in ['retrieve', 'list']:
             return (AllowAny(),)
-        elif self.action == 'update':
-            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
         return (IsAuthenticated(),)
 
     def perform_create(self, serializer):
@@ -196,15 +194,12 @@ class TitleViewSet(viewsets.ModelViewSet):
         .order_by("id")
     )
     serializer_class = TitleGetSerializer
+    http_method_names = ['get', 'post', 'patch', 'delete']
     pagination_class = PageNumberPagination
     filter_backends = (DjangoFilterBackend,)
     filterset_class = FilterTitles
     search_fields = ('name', 'year', 'genre__slug', 'category__slug')
-
-    def get_permissions(self):
-        if self.action == 'update':
-            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-        return (IsAdminOrReadOnly(),)
+    permission_classes = (IsAdminOrReadOnly,)
 
     def get_serializer_class(self):
         if self.request.method in permissions.SAFE_METHODS:
