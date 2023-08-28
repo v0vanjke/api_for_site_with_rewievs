@@ -128,10 +128,12 @@ class ReviewViewSet(viewsets.ModelViewSet):
         return ReviewSerializer
 
     def get_permissions(self):
-        if self.action in ['update', 'partial_update', 'destroy']:
+        if self.action in ['partial_update', 'destroy']:
             return (IsOwnerOrIsAdminOrIsModerator(),)
         elif self.action in ['retrieve', 'list']:
             return (AllowAny(),)
+        elif self.action == 'update':
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
         return (IsAuthenticated(),)
 
     def perform_create(self, serializer):
@@ -147,10 +149,12 @@ class ReviewCommentViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewCommentSerializer
 
     def get_permissions(self):
-        if self.action in ['update', 'partial_update', 'destroy']:
+        if self.action in ['partial_update', 'destroy']:
             return (IsOwnerOrIsAdminOrIsModerator(),)
         elif self.action in ['retrieve', 'list']:
             return (AllowAny(),)
+        elif self.action == 'update':
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
         return (IsAuthenticated(),)
 
     def perform_create(self, serializer):
@@ -196,7 +200,11 @@ class TitleViewSet(viewsets.ModelViewSet):
     filter_backends = (DjangoFilterBackend,)
     filterset_class = FilterTitles
     search_fields = ('name', 'year', 'genre__slug', 'category__slug')
-    permission_classes = [IsAdminOrReadOnly]
+
+    def get_permissions(self):
+        if self.action == 'update':
+            return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+        return (IsAdminOrReadOnly(),)
 
     def get_serializer_class(self):
         if self.request.method in permissions.SAFE_METHODS:
