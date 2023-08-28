@@ -1,10 +1,13 @@
-from rest_framework import serializers
-from rest_framework.relations import SlugRelatedField
-from rest_framework.exceptions import ValidationError
-from django.shortcuts import get_object_or_404
-from rest_framework_simplejwt.tokens import RefreshToken
-from reviews.models import (Review, ReviewComment, Category, Genre, Title, User, EMAIL_LENGTH, USERNAME_LENGTH)
 import re
+
+from django.shortcuts import get_object_or_404
+from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
+from rest_framework.relations import SlugRelatedField
+from rest_framework_simplejwt.tokens import RefreshToken
+
+from reviews.models import (EMAIL_LENGTH, USERNAME_LENGTH, Category, Genre,
+                            Review, ReviewComment, Title, User)
 
 
 class UserSerializer(serializers.ModelSerializer):
