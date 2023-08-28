@@ -1,4 +1,4 @@
-from rest_framework import serializers, validators
+from rest_framework import serializers
 from rest_framework.relations import SlugRelatedField
 from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
@@ -132,7 +132,8 @@ class ReviewPostSerializer(serializers.ModelSerializer):
                 author=self.context['request'].user,
                 title=self.context['view'].kwargs['title_id']
         ).exists():
-            raise serializers.ValidationError('Можно оставить только один отзыв к произведению!')
+            raise serializers.ValidationError('Можно оставить только'
+                                              'один отзыв к произведению!')
         return data
 
 
