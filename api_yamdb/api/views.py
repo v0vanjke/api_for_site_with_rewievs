@@ -14,8 +14,8 @@ from api.serializers import (ReviewSerializer, ReviewCommentSerializer,
                              CategorySerializer, GenreSerializer,
                              SignUpSerializer, UserSerializer,
                              TokenSerializer, TitleGetSerializer, TitlePostSerializer,
-                             )
-from .permissions import (IsAdminOrReadOnly, IsAuthorOrReadOnly,
+                             ReviewPostSerializer,)
+from .permissions import (IsOwnerOrIsAdminOrIsModerator, IsAuthorOrReadOnly,
                           IsModeratorOrReadOnly, IsOwnerOrIsAdmin)
 from reviews.models import Review, ReviewComment, User, Title, Genre, Category
 from api_yamdb.settings import DEFAULT_FROM_EMAIL
@@ -113,14 +113,22 @@ class SignUpView(APIView):
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
-    serializer_class = ReviewSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return ReviewPostSerializer
+        return ReviewSerializer
+
+    def get_permissions(self):
+        if self.action in ['update', 'partial_update', 'destroy']:
+            return (IsOwnerOrIsAdminOrIsModerator(),)
+        elif self.action in ['retrieve', 'list']:
+            return (AllowAny(),)
+        return (IsAuthenticated(),)
 
     def perform_create(self, serializer):
         title = get_object_or_404(Title, pk=self.kwargs['title_id'])
-        serializer.save(
-            title=title,
-            author=self.request.user,
-        )
+        serializer.save(title=title, author=self.request.user,)
 
     def get_queryset(self):
         title = get_object_or_404(Title, pk=self.kwargs['title_id'])
@@ -130,6 +138,13 @@ class ReviewViewSet(viewsets.ModelViewSet):
 class ReviewCommentViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewCommentSerializer
 
+    def get_permissions(self):
+        if self.action in ['update', 'partial_update', 'destroy']:
+            return (IsOwnerOrIsAdminOrIsModerator(),)
+        elif self.action in ['retrieve', 'list']:
+            return (AllowAny(),)
+        return (IsAuthenticated(),)
+
     def perform_create(self, serializer):
         review = get_object_or_404(Review, pk=self.kwargs['review_id'])
         serializer.save(
@@ -138,7 +153,6 @@ class ReviewCommentViewSet(viewsets.ModelViewSet):
         )
 
     def get_queryset(self):
-
         review = get_object_or_404(Review, pk=self.kwargs['review_id'])
         return review.comments.all()
 
@@ -147,7 +161,6 @@ class CategoryViewSet(mixins.ListModelMixin, mixins.CreateModelMixin,
                       mixins.DestroyModelMixin, viewsets.GenericViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = (IsAdminOrReadOnly,)
     search_fields = ('name', )
     lookup_field = 'slug'
 
@@ -156,7 +169,6 @@ class GenreViewSet(mixins.ListModelMixin, mixins.CreateModelMixin,
                    mixins.DestroyModelMixin, viewsets.GenericViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-    permission_classes = (IsAdminOrReadOnly,)
     search_fields = ('name', )
     lookup_field = 'slug'
 
@@ -173,6 +185,6 @@ class TitleViewSet(viewsets.ModelViewSet):
     # permission_classes =
 
     def get_serializer_class(self):
-        if self.request.method in SAFE_METHODS:
+        if self.request.method in permissions.SAFE_METHODS:
             return TitleGetSerializer
         return TitlePostSerializer

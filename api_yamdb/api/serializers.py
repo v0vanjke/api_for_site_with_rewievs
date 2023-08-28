@@ -96,6 +96,31 @@ class TokenSerializer(serializers.Serializer):
         )
 
 
+class ReviewPostSerializer(serializers.ModelSerializer):
+    author = SlugRelatedField(slug_field='username', read_only=True)
+    title = serializers.PrimaryKeyRelatedField(
+        read_only=True,
+    )
+
+    class Meta:
+        fields = '__all__'
+        model = Review
+
+    def validate_score(self, score):
+        if score not in range(1, 11):
+            raise ValidationError(
+                'Оценка должна быть целым значением от 1 до 10.')
+        return score
+
+    def validate(self, data):
+        if Review.objects.filter(
+                author=self.context['request'].user,
+                title=self.context['view'].kwargs['title_id']
+        ).exists():
+            raise serializers.ValidationError('Можно оставить только один отзыв к произведению!')
+        return data
+
+
 class ReviewSerializer(serializers.ModelSerializer):
     author = SlugRelatedField(slug_field='username', read_only=True)
     title = serializers.PrimaryKeyRelatedField(
@@ -105,19 +130,6 @@ class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         fields = '__all__'
         model = Review
-        validators = [
-            validators.UniqueTogetherValidator(
-                queryset=Review.objects.all(),
-                fields=('author', 'title')
-            ),
-
-        ]
-
-    def validate(self, data):
-        if data['score'] not in range(1, 11):
-            raise ValidationError(
-                'Оценка должна быть целым значением от 1 до 10.')
-        return data
 
 
 class ReviewCommentSerializer(serializers.ModelSerializer):
