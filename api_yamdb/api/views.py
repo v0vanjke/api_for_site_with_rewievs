@@ -4,7 +4,6 @@ from rest_framework import permissions, status, viewsets, filters, mixins
 from rest_framework.views import APIView
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework import authentication
 from django.db import IntegrityError
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -16,7 +15,7 @@ from api.serializers import (ReviewSerializer, ReviewCommentSerializer,
                              SignUpSerializer, UserSerializer,
                              TokenSerializer, TitleGetSerializer, TitlePostSerializer,
                              ReviewPostSerializer,)
-from .permissions import (IsOwnerOrIsAdminOrIsModerator, IsAdminOrReadOnly,
+from .permissions import (IsOwnerOrIsAdminOrIsModerator, IsAuthorOrReadOnly,
                           IsModeratorOrReadOnly, IsOwnerOrIsAdmin)
 from reviews.models import Review, ReviewComment, User, Title, Genre, Category
 from api_yamdb.settings import DEFAULT_FROM_EMAIL
@@ -56,7 +55,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def update(self, request, *args, **kwargs):
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-    
+
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
         serializer = UserSerializer(instance, data=request.data, partial=True)
@@ -174,22 +173,11 @@ class CategoryViewSet(mixins.ListModelMixin, mixins.CreateModelMixin,
 
 
 class GenreViewSet(mixins.ListModelMixin, mixins.CreateModelMixin,
-                   mixins.DestroyModelMixin, mixins.UpdateModelMixin,
-                   viewsets.GenericViewSet):
+                   mixins.DestroyModelMixin, viewsets.GenericViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
     search_fields = ('name', )
     lookup_field = 'slug'
-    permission_classes = (IsAdminOrReadOnly,)
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    filterset_fields = ['name']
-
-    def get_permissions(self):
-        if self.action == 'create':
-            return [permissions.IsAuthenticated()]
-        elif self.action == 'partial_update':
-            return [permissions.IsAuthenticated()]
-        return []
 
 
 class TitleViewSet(viewsets.ModelViewSet):

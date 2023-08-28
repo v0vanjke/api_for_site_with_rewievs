@@ -28,14 +28,13 @@ class User(AbstractUser):
     email = models.EmailField(
         verbose_name='Электронная почта',
         unique=True,
-        null=True,
+        null=False,
         blank=False,
     )
     first_name = models.CharField(
         verbose_name='Имя',
         max_length=150,
         blank=True,
-        null=False,
     )
     last_name = models.CharField(
         verbose_name='Фамилия',
@@ -72,7 +71,7 @@ class User(AbstractUser):
 
     @property
     def is_admin(self):
-        return (self.role == self.ADMIN or self.is_superuser)
+        return self.role == self.ADMIN or self.is_superuser
 
     @property
     def is_moderator(self):
