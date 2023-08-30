@@ -13,7 +13,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import AccessToken
 from django.conf import settings
 
-from api.filters import FilterTitles
+from api.filters import FilterTitle
 from api.permissions import (IsAdminOrReadOnly, IsOwnerOrIsAdmin,
                              IsOwnerOrIsAdminOrIsModerator)
 from api.serializers import (CategorySerializer, GenreSerializer,
@@ -74,8 +74,14 @@ class ReviewCommentViewSet(viewsets.ModelViewSet):
         return review.comments.all()
 
 
-class CategoryViewSet(mixins.ListModelMixin, mixins.CreateModelMixin,
-                      mixins.DestroyModelMixin, viewsets.GenericViewSet):
+class GenreCategoryViewSet(mixins.ListModelMixin, mixins.CreateModelMixin,
+                           mixins.DestroyModelMixin, viewsets.GenericViewSet):
+
+    """
+    """
+
+
+class CategoryViewSet(GenreCategoryViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     search_fields = ('name', )
@@ -84,8 +90,7 @@ class CategoryViewSet(mixins.ListModelMixin, mixins.CreateModelMixin,
     permission_classes = [IsAdminOrReadOnly]
 
 
-class GenreViewSet(mixins.ListModelMixin, mixins.CreateModelMixin,
-                   mixins.DestroyModelMixin, viewsets.GenericViewSet):
+class GenreViewSet(GenreCategoryViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
     search_fields = ('name', )
@@ -104,7 +109,7 @@ class TitleViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete']
     pagination_class = PageNumberPagination
     filter_backends = (DjangoFilterBackend,)
-    filterset_class = FilterTitles
+    filterset_class = FilterTitle
     search_fields = ('name', 'year', 'genre__slug', 'category__slug')
     permission_classes = (IsAdminOrReadOnly,)
 
