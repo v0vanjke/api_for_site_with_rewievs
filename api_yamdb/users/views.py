@@ -1,29 +1,18 @@
 import re
 
+from api.permissions import (IsAdminOrReadOnly, IsOwnerOrIsAdmin,
+                             IsOwnerOrIsAdminOrIsModerator)
 from django.contrib.auth.tokens import default_token_generator
-from django.core.mail import send_mail
-from django.db import IntegrityError, models
 from django.shortcuts import get_object_or_404
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, mixins, permissions, status, viewsets
+from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import AccessToken
-
-from api.filters import FilterTitles
-from api.permissions import (IsAdminOrReadOnly, IsOwnerOrIsAdmin,
-                             IsOwnerOrIsAdminOrIsModerator)
-from api.serializers import (CategorySerializer, GenreSerializer,
-                             ReviewCommentSerializer, ReviewPostSerializer,
-                             ReviewSerializer,
-                             TitleGetSerializer, TitlePostSerializer,)
-from users.serializers import SignUpSerializer, TokenSerializer, UserCreateSerializer, UserDisplaySerializer
-from api_yamdb.settings import DEFAULT_FROM_EMAIL
 from reviews.models import Category, Genre, Review, Title, User
+from users.serializers import (SignUpSerializer, TokenSerializer,
+                               UserCreateSerializer, UserDisplaySerializer)
 
 
 class TokenView(APIView):
@@ -103,5 +92,5 @@ class SignUpView(APIView):
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.save()
+        serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
