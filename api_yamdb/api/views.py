@@ -5,13 +5,16 @@ from rest_framework import filters, mixins, permissions, viewsets
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from api.filters import FilterTitles
-from api.permissions import IsAdminOrReadOnly, IsOwnerOrIsAdminOrIsModerator
-from api.serializers import (
-    CategorySerializer, GenreSerializer,
-    ReviewCommentSerializer, ReviewPostSerializer, ReviewSerializer,
-    TitleGetSerializer, TitlePostSerializer,
-)
+from api.filters import FilterTitle
+from api.permissions import (IsAdminOrReadOnly, IsOwnerOrIsAdmin,
+                             IsOwnerOrIsAdminOrIsModerator)
+from api.serializers import (CategorySerializer, GenreSerializer,
+                             ReviewCommentSerializer, ReviewPostSerializer,
+                             ReviewSerializer,
+                             TitleGetSerializer, TitlePostSerializer,
+                             )
+from users.serializers import UserDisplaySerializer, UserCreateSerializer, SignUpSerializer, TokenSerializer
+from api_yamdb.settings import DEFAULT_FROM_EMAIL
 from reviews.models import Category, Genre, Review, Title
 
 
@@ -62,8 +65,14 @@ class ReviewCommentViewSet(viewsets.ModelViewSet):
         return review.comments.all()
 
 
-class CategoryViewSet(mixins.ListModelMixin, mixins.CreateModelMixin,
-                      mixins.DestroyModelMixin, viewsets.GenericViewSet):
+class GenreCategoryViewSet(mixins.ListModelMixin, mixins.CreateModelMixin,
+                           mixins.DestroyModelMixin, viewsets.GenericViewSet):
+
+    """
+    """
+
+
+class CategoryViewSet(GenreCategoryViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     search_fields = ('name', )
@@ -72,8 +81,7 @@ class CategoryViewSet(mixins.ListModelMixin, mixins.CreateModelMixin,
     permission_classes = [IsAdminOrReadOnly]
 
 
-class GenreViewSet(mixins.ListModelMixin, mixins.CreateModelMixin,
-                   mixins.DestroyModelMixin, viewsets.GenericViewSet):
+class GenreViewSet(GenreCategoryViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
     search_fields = ('name', )
@@ -92,7 +100,7 @@ class TitleViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete']
     pagination_class = PageNumberPagination
     filter_backends = (DjangoFilterBackend,)
-    filterset_class = FilterTitles
+    filterset_class = FilterTitle
     search_fields = ('name', 'year', 'genre__slug', 'category__slug')
     permission_classes = (IsAdminOrReadOnly,)
 

@@ -1,3 +1,4 @@
+from datetime import datetime
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from users.models import User
@@ -39,18 +40,20 @@ class Title(models.Model):
     name = models.CharField(
         max_length=200, verbose_name='Название'
     )
-    year = models.PositiveBigIntegerField(
-        db_index=True
-    )
+    year = models.PositiveSmallIntegerField(
+        db_index=True,
+        validators=[MaxValueValidator(datetime.now().year),
+                    MinValueValidator(0)])
     description = models.TextField(
         blank=True, null=True, max_length=200, verbose_name='Описание'
     )
     genre = models.ManyToManyField(
-        Genre, blank=True, verbose_name='Жанр'
+        Genre, blank=True, verbose_name='Жанр', related_name='titles'
     )
     category = models.ForeignKey(
         Category, blank=True, null=True,
-        on_delete=models.SET_NULL, verbose_name='Категория'
+        on_delete=models.SET_NULL, verbose_name='Категория',
+        related_name='titles'
     )
 
     class Meta:
