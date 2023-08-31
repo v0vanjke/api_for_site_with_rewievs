@@ -1,16 +1,16 @@
 import re
 
-from django.shortcuts import get_object_or_404
-from django.core.mail import send_mail
-from django.db import IntegrityError
 from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
+from django.core.validators import RegexValidator
+from django.db import IntegrityError
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.core.validators import RegexValidator
-from reviews.models import User
-from api_yamdb.settings import DEFAULT_FROM_EMAIL
 
+from api_yamdb.settings import DEFAULT_FROM_EMAIL
 from reviews.models import EMAIL_LENGTH, USERNAME_LENGTH
+from users.models import User
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -99,7 +99,7 @@ class SignUpSerializer(serializers.Serializer):
             user, _ = User.objects.get_or_create(
                 username=username,
                 email=email
-                )
+            )
         except IntegrityError:
             raise serializers.ValidationError(
                 'Имя пользователя или email уже используются.'

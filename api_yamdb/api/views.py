@@ -1,17 +1,17 @@
-from api.filters import FilterTitle
-from api.permissions import (IsAdminOrReadOnly, IsOwnerOrIsAdmin,
-                             IsOwnerOrIsAdminOrIsModerator)
-from api.serializers import (CategorySerializer, GenreSerializer,
-                             ReviewCommentSerializer, ReviewPostSerializer,
-                             ReviewSerializer, TitleGetSerializer,
-                             TitlePostSerializer)
 from django.db import models
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, mixins, permissions, viewsets
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
+
 from reviews.models import Category, Genre, Review, Title
+from api.filters import FilterTitle
+from api.permissions import IsAdminOrReadOnly, IsOwnerOrIsAdminOrIsModerator
+from api.serializers import (CategorySerializer, GenreSerializer,
+                             ReviewCommentSerializer, ReviewPostSerializer,
+                             ReviewSerializer, TitleGetSerializer,
+                             TitlePostSerializer)
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
@@ -33,7 +33,10 @@ class ReviewViewSet(viewsets.ModelViewSet):
         return (IsAuthenticated(),)
 
     def perform_create(self, serializer):
-        serializer.save(title=self.get_current_title(), author=self.request.user,)
+        serializer.save(
+            title=self.get_current_title(),
+            author=self.request.user,
+        )
 
     def get_queryset(self):
         return self.get_current_title().reviews.all()
