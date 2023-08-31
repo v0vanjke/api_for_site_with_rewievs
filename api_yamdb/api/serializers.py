@@ -11,12 +11,9 @@ class ReviewPostSerializer(serializers.ModelSerializer):
     """Сериализатор для отзыва."""
 
     author = SlugRelatedField(slug_field='username', read_only=True)
-    title = serializers.PrimaryKeyRelatedField(
-        read_only=True,
-    )
 
     class Meta:
-        fields = '__all__'
+        fields = ('id', 'text', 'author', 'score', 'pub_date')
         model = Review
 
     def validate_score(self, score):
@@ -39,12 +36,9 @@ class ReviewSerializer(serializers.ModelSerializer):
     """Сериализатор для отзыва на произведение."""
 
     author = SlugRelatedField(slug_field='username', read_only=True)
-    title = serializers.PrimaryKeyRelatedField(
-        read_only=True,
-    )
 
     class Meta:
-        fields = '__all__'
+        fields = ('id', 'text', 'author', 'score', 'pub_date')
         model = Review
 
 
@@ -54,13 +48,18 @@ class ReviewCommentSerializer(serializers.ModelSerializer):
     author = SlugRelatedField(
         read_only=True, slug_field='username'
     )
-    review = serializers.PrimaryKeyRelatedField(
-        read_only=True,
-    )
 
     class Meta:
-        fields = '__all__'
+        fields = ('id', 'text', 'author', 'pub_date')
         model = ReviewComment
+
+    def validate(self, data):
+        if Review.objects.filter(
+                author=self.context['request'].user,
+                title=self.context['view'].kwargs['title_id']
+        ).exists():
+            return data
+        return ValidationErrorNotFound('{detail: title or review not found.}')
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -111,6 +110,6 @@ class TitlePostSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
-        fields = ('id', 'name', 'year', 'rating', 'description',
+        fields = ('id', 'name', 'year', 'description',
                   'genre', 'category')
         model = Title
