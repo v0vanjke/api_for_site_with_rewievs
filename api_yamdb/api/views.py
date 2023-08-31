@@ -1,30 +1,18 @@
-import re
-from django.contrib.auth.tokens import default_token_generator
-from django.core.mail import send_mail
-from django.db import IntegrityError, models
+from django.db import models
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, mixins, permissions, status, viewsets
+from rest_framework import filters, mixins, permissions, viewsets
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.views import APIView
-
-from rest_framework_simplejwt.tokens import AccessToken
-from django.conf import settings
 
 from api.filters import FilterTitles
-from api.permissions import (IsAdminOrReadOnly, IsOwnerOrIsAdmin,
-                             IsOwnerOrIsAdminOrIsModerator)
-from api.serializers import (CategorySerializer, GenreSerializer,
-                             ReviewCommentSerializer, ReviewPostSerializer,
-                             ReviewSerializer,
-                             TitleGetSerializer, TitlePostSerializer,
-                             )
-from users.serializers import UserDisplaySerializer, UserCreateSerializer, SignUpSerializer, TokenSerializer
-from api_yamdb.settings import DEFAULT_FROM_EMAIL
+from api.permissions import IsAdminOrReadOnly, IsOwnerOrIsAdminOrIsModerator
+from api.serializers import (
+    CategorySerializer, GenreSerializer,
+    ReviewCommentSerializer, ReviewPostSerializer, ReviewSerializer,
+    TitleGetSerializer, TitlePostSerializer,
+)
 from reviews.models import Category, Genre, Review, Title
-from users.models import User
 
 
 class ReviewViewSet(viewsets.ModelViewSet):

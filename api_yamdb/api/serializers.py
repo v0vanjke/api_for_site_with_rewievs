@@ -1,21 +1,10 @@
-import re
-from django.shortcuts import get_object_or_404
 from rest_framework import serializers
-from django.db.models import Q
 from rest_framework.exceptions import ValidationError
 from rest_framework.relations import SlugRelatedField
-from rest_framework.validators import UniqueValidator
-from rest_framework import status
-from rest_framework_simplejwt.tokens import RefreshToken
-from django.core.validators import RegexValidator
-from rest_framework.response import Response
-from django.core.mail import send_mail
-from django.contrib.auth.tokens import default_token_generator
 from reviews.models import (
-    EMAIL_LENGTH, USERNAME_LENGTH, Category,
-    Genre, Review, ReviewComment, Title, User,
+    Category, Genre, Review,
+    ReviewComment, Title,
 )
-from django.conf import settings
 
 
 class ReviewPostSerializer(serializers.ModelSerializer):
