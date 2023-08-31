@@ -1,18 +1,17 @@
 import re
 
+from django.contrib.auth.tokens import default_token_generator
+from django.core.mail import send_mail
+from django.db import IntegrityError
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.relations import SlugRelatedField
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth.tokens import default_token_generator
-from django.core.mail import send_mail
-from reviews.models import (
-    EMAIL_LENGTH, USERNAME_LENGTH, Category,
-    Genre, Review, ReviewComment, Title, User,
-)
+from reviews.models import (EMAIL_LENGTH, USERNAME_LENGTH, Category, Genre,
+                            Review, ReviewComment, Title, User)
+
 from api_yamdb.settings import DEFAULT_FROM_EMAIL
-from django.db import IntegrityError
 
 
 class UserCreateSerializer(serializers.ModelSerializer):

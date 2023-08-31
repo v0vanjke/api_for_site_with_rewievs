@@ -1,34 +1,24 @@
-import re
-from django.contrib.auth.tokens import default_token_generator
-from django.core.mail import send_mail
-from django.db import IntegrityError, models
-from django.shortcuts import get_object_or_404
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import filters, mixins, permissions, status, viewsets
-from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.views import APIView
-
-from rest_framework_simplejwt.tokens import AccessToken
-from django.conf import settings
-
 from api.filters import FilterTitle
 from api.permissions import (IsAdminOrReadOnly, IsOwnerOrIsAdmin,
                              IsOwnerOrIsAdminOrIsModerator)
 from api.serializers import (CategorySerializer, GenreSerializer,
                              ReviewCommentSerializer, ReviewPostSerializer,
-                             ReviewSerializer,
-                             TitleGetSerializer, TitlePostSerializer,
-                             )
-from users.serializers import UserDisplaySerializer, UserCreateSerializer, SignUpSerializer, TokenSerializer
-from api_yamdb.settings import DEFAULT_FROM_EMAIL
+                             ReviewSerializer, TitleGetSerializer,
+                             TitlePostSerializer)
+from django.db import models
+from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, mixins, permissions, viewsets
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from reviews.models import Category, Genre, Review, Title
-from users.models import User
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete']
+
+    def get_current_title(self):
+        return get_object_or_404(Title, pk=self.kwargs['title_id'])
 
     def get_serializer_class(self):
         if self.request.method == 'POST':
@@ -43,17 +33,18 @@ class ReviewViewSet(viewsets.ModelViewSet):
         return (IsAuthenticated(),)
 
     def perform_create(self, serializer):
-        title = get_object_or_404(Title, pk=self.kwargs['title_id'])
-        serializer.save(title=title, author=self.request.user,)
+        serializer.save(title=self.get_current_title(), author=self.request.user,)
 
     def get_queryset(self):
-        title = get_object_or_404(Title, pk=self.kwargs['title_id'])
-        return title.reviews.all()
+        return self.get_current_title().reviews.all()
 
 
 class ReviewCommentViewSet(viewsets.ModelViewSet):
     serializer_class = ReviewCommentSerializer
     http_method_names = ['get', 'post', 'patch', 'delete']
+
+    def get_current_review(self):
+        return get_object_or_404(Review, pk=self.kwargs['review_id'])
 
     def get_permissions(self):
         if self.action in ['partial_update', 'destroy']:
@@ -63,15 +54,13 @@ class ReviewCommentViewSet(viewsets.ModelViewSet):
         return (IsAuthenticated(),)
 
     def perform_create(self, serializer):
-        review = get_object_or_404(Review, pk=self.kwargs['review_id'])
         serializer.save(
-            review=review,
+            review=self.get_current_review(),
             author=self.request.user
         )
 
     def get_queryset(self):
-        review = get_object_or_404(Review, pk=self.kwargs['review_id'])
-        return review.comments.all()
+        return self.get_current_review().comments.all()
 
 
 class GenreCategoryViewSet(mixins.ListModelMixin, mixins.CreateModelMixin,
