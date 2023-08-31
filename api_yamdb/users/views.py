@@ -1,18 +1,19 @@
-import re
-
-from api.permissions import (IsAdminOrReadOnly, IsOwnerOrIsAdmin,
-                             IsOwnerOrIsAdminOrIsModerator)
-from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, status, viewsets
+from django.contrib.auth.tokens import default_token_generator
+from rest_framework import (
+    filters, status, viewsets,
+)
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import AccessToken
-from reviews.models import Category, Genre, Review, Title, User
-from users.serializers import (SignUpSerializer, TokenSerializer,
-                               UserCreateSerializer, UserDisplaySerializer)
+from api.permissions import IsOwnerOrIsAdmin
+from users.serializers import (
+    SignUpSerializer, TokenSerializer,
+    UserCreateSerializer, UserDisplaySerializer,
+)
+from reviews.models import User
 
 
 class TokenView(APIView):
@@ -52,7 +53,11 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
-        serializer = UserDisplaySerializer(instance, data=request.data, partial=True)
+        serializer = UserDisplaySerializer(
+            instance,
+            data=request.data,
+            partial=True
+            )
         serializer.is_valid(raise_exception=True)
         serializer.save(role=instance.role)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -72,13 +77,6 @@ class UserViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-
-        new_username = serializer.validated_data.get('username')
-        if new_username and not re.match(r'^[\w.@+-]+$', new_username):
-            return Response(
-                {'detail': 'Неверный формат имени пользователя.'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
 
         serializer.save(role=user.role)
         return Response(serializer.data, status=status.HTTP_200_OK)

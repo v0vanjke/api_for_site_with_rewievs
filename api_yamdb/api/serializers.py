@@ -1,12 +1,10 @@
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.relations import SlugRelatedField
-from reviews.models import (EMAIL_LENGTH, USERNAME_LENGTH, Category, Genre,
-                            Review, ReviewComment, Title, User)
-
-
-class ValidationErrorNotFound(serializers.ValidationError):
-    status_code = 404
+from reviews.models import (
+    Category, Genre, Review,
+    ReviewComment, Title,
+)
 
 
 class ReviewPostSerializer(serializers.ModelSerializer):

@@ -1,17 +1,16 @@
 import re
 
-from django.contrib.auth.tokens import default_token_generator
+from django.shortcuts import get_object_or_404
 from django.core.mail import send_mail
 from django.db import IntegrityError
-from django.shortcuts import get_object_or_404
+from django.contrib.auth.tokens import default_token_generator
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
-from rest_framework.relations import SlugRelatedField
 from rest_framework_simplejwt.tokens import RefreshToken
-from reviews.models import (EMAIL_LENGTH, USERNAME_LENGTH, Category, Genre,
-                            Review, ReviewComment, Title, User)
-
+from django.core.validators import RegexValidator
+from reviews.models import User
 from api_yamdb.settings import DEFAULT_FROM_EMAIL
+
+from reviews.models import EMAIL_LENGTH, USERNAME_LENGTH
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -55,7 +54,19 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
 
 class UserDisplaySerializer(serializers.ModelSerializer):
-    """Сериализатор для пользователей."""
+    """Сериализатор для отображения пользователей."""
+
+    username = serializers.CharField(
+        required=True,
+        max_length=USERNAME_LENGTH,
+        validators=[
+            RegexValidator(
+                regex=r'^[\w.@+-]+$',
+                message='Имя пользователя должно'
+                'соответствовать паттерну ^[\\w.@+-]+$.'
+            )
+        ]
+    )
 
     class Meta:
         model = User
@@ -68,10 +79,12 @@ class UserDisplaySerializer(serializers.ModelSerializer):
 class SignUpSerializer(serializers.Serializer):
     username = serializers.CharField(required=True, max_length=USERNAME_LENGTH)
     email = serializers.EmailField(required=True, max_length=EMAIL_LENGTH)
+
     def validate_username(self, value):
         if not re.match(r'^[a-zA-Z0-9_]+$', value):
             raise serializers.ValidationError(
-                'Имя пользователя должно содержать только буквы, цифры и подчеркивания.'
+                'Имя пользователя должно содержать'
+                'только буквы, цифры и подчеркивания.'
             )
         if value == 'me':
             raise serializers.ValidationError(
@@ -83,7 +96,10 @@ class SignUpSerializer(serializers.Serializer):
         username = validated_data['username']
         email = validated_data['email']
         try:
-            user, _ = User.objects.get_or_create(username=username, email=email)
+            user, _ = User.objects.get_or_create(
+                username=username,
+                email=email
+                )
         except IntegrityError:
             raise serializers.ValidationError(
                 'Имя пользователя или email уже используются.'
