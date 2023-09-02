@@ -22,17 +22,27 @@ class UserCreateSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(required=True, max_length=EMAIL_LENGTH)
 
     def validate_username(self, value):
+        if (self.instance and self.instance.username == "me") or value == "me":
+            raise serializers.ValidationError(
+                'Имя пользователя "me" недопустимо или нельзя изменить его.'
+            )
+
         if not re.match(r'^[a-zA-Z0-9_]+$', value):
             raise serializers.ValidationError(
-                'Имя пользователя должно содержать только',
-                'буквы, цифры и подчеркивания.'
+                'Имя пользователя должно содержать'
+                'только буквы, цифры и подчеркивания.'
+            )
+        if User.objects.filter(username=value).exclude(pk=self.instance.pk if self.instance else None).exists():
+            raise serializers.ValidationError(
+                'Пользователь с таким именем пользователя уже существует.'
             )
         return value
 
     def validate(self, data):
         username = data.get('username')
         email = data.get('email')
-
+        role = data.get('role', None)
+        
         if User.objects.filter(username=username).exists():
             raise serializers.ValidationError(
                 'Пользователь с таким именем пользователя уже существует.'
@@ -42,7 +52,11 @@ class UserCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'Пользователь с таким email уже существует.'
             )
-        return data
+        if self.instance and role and self.instance.role == 'user' and role == 'moderator':
+            raise serializers.ValidationError(
+                'Нельзя изменить роль с "user" на "moderator".'
+            )
+        return data    
 
     class Meta:
         model = User
