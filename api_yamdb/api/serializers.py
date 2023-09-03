@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import rest_framework.exceptions
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -87,7 +89,7 @@ class TitleGetSerializer(serializers.ModelSerializer):
         read_only=True,
         many=True
     )
-    rating = serializers.IntegerField(read_only=True)
+    rating = serializers.FloatField(read_only=True)
 
     class Meta:
         fields = ('id', 'name', 'year', 'rating', 'description',
@@ -118,3 +120,11 @@ class TitlePostSerializer(serializers.ModelSerializer):
         representation['category'] = CategorySerializer(instance.category).data
         representation['genre'] = [GenreSerializer(genre).data for genre in instance.genre.all()]
         return representation
+      
+    def validate_year(self, data):
+        actual_year = datetime.date.today().year
+        if int(self.initial_data['year']) > actual_year:
+            raise serializers.ValidationError('некорректный формат года!')
+        elif int(self.initial_data['year']) < 0:
+            raise serializers.ValidationError('некорректный формат года!')
+        return data
