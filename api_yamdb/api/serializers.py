@@ -115,3 +115,9 @@ class TitlePostSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'year', 'description',
                   'genre', 'category')
         model = Title
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['category'] = CategorySerializer(instance.category).data
+        representation['genre'] = [GenreSerializer(genre).data for genre in instance.genre.all()]
+        return representation

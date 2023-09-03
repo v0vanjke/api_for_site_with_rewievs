@@ -46,12 +46,14 @@ class Title(models.Model):
     year = models.PositiveSmallIntegerField(
         db_index=True,
         validators=[MaxValueValidator(datetime.now().year),
-                    MinValueValidator(0)])
+                    MinValueValidator(0)],
+        verbose_name='Год',
+    )
     description = models.TextField(
-        blank=True, null=True, max_length=200, verbose_name='Описание'
+        blank=True, null=True, max_length=200, verbose_name='Описание',
     )
     genre = models.ManyToManyField(
-        Genre, blank=True, verbose_name='Жанр', related_name='titles'
+        Genre, blank=True, verbose_name='Жанр', related_name='titles',
     )
     category = models.ForeignKey(
         Category, blank=True, null=True,

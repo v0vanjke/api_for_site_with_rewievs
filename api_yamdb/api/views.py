@@ -47,7 +47,7 @@ class ReviewCommentViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete']
 
     def get_current_review(self):
-        return get_object_or_404(Review, pk=self.kwargs['review_id'])
+        return get_object_or_404(Review, pk=self.kwargs['review_id'], title=self.kwargs['title_id'])
 
     def get_permissions(self):
         if self.action in ['partial_update', 'destroy']:
