@@ -1,12 +1,9 @@
+import rest_framework.exceptions
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.relations import SlugRelatedField
 
 from reviews.models import Category, Genre, Review, ReviewComment, Title
-
-
-class ValidationErrorNotFound(serializers.ValidationError):
-    status_code = 404
 
 
 class ReviewPostSerializer(serializers.ModelSerializer):
@@ -61,7 +58,7 @@ class ReviewCommentSerializer(serializers.ModelSerializer):
                 title=self.context['view'].kwargs['title_id']
         ).exists():
             return data
-        return ValidationErrorNotFound('{detail: title or review not found.}')
+        raise rest_framework.exceptions.NotFound('{detail: title or review not found.}')
 
 
 class CategorySerializer(serializers.ModelSerializer):
