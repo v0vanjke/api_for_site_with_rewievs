@@ -131,7 +131,7 @@ class TokenSerializer(serializers.Serializer):
     username = serializers.CharField(required=True, max_length=USERNAME_LENGTH)
     confirmation_code = serializers.CharField(required=True)
 
-    def validate_code(self, data):
+    def validate(self, data):
         user = get_object_or_404(User, username=data['username'])
         if user.confirmation_code != data['confirmation_code']:
             raise serializers.ValidationError('Неверный код подтерждения')
