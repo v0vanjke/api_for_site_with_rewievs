@@ -1,14 +1,11 @@
 from datetime import datetime
 
+import rest_framework.exceptions
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.relations import SlugRelatedField
 
 from reviews.models import Category, Genre, Review, ReviewComment, Title
-
-
-class ValidationErrorNotFound(serializers.ValidationError):
-    status_code = 404
 
 
 class ReviewPostSerializer(serializers.ModelSerializer):
@@ -63,7 +60,7 @@ class ReviewCommentSerializer(serializers.ModelSerializer):
                 title=self.context['view'].kwargs['title_id']
         ).exists():
             return data
-        return ValidationErrorNotFound('{detail: title or review not found.}')
+        raise rest_framework.exceptions.NotFound('{detail: title or review not found.}')
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -118,6 +115,12 @@ class TitlePostSerializer(serializers.ModelSerializer):
                   'genre', 'category')
         model = Title
 
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['category'] = CategorySerializer(instance.category).data
+        representation['genre'] = [GenreSerializer(genre).data for genre in instance.genre.all()]
+        return representation
+      
     def validate_year(self, data):
         actual_year = datetime.date.today().year
         if int(self.initial_data['year']) > actual_year:
