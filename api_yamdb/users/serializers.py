@@ -6,7 +6,6 @@ from django.core.validators import RegexValidator
 from django.db import IntegrityError
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from api_yamdb.settings import DEFAULT_FROM_EMAIL
 from reviews.models import EMAIL_LENGTH, USERNAME_LENGTH
@@ -19,31 +18,32 @@ class UserCreateSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
         required=True,
         max_length=USERNAME_LENGTH,
+        validators=[
+            RegexValidator(
+                regex=r'^[\w.@+-]+$',
+                message='Имя пользователя должно'
+                        'соответствовать паттерну ^[\\w.@+-]+$.'
+            )
+        ]
     )
     email = serializers.EmailField(required=True, max_length=EMAIL_LENGTH)
 
     def validate_username(self, value):
-        if (self.instance and self.instance.username == "me") or value == "me":
-            raise serializers.ValidationError(
-                'Имя пользователя "me" недопустимо или нельзя изменить его.'
-            )
-
         if not re.match(r'^[a-zA-Z0-9_]+$', value):
             raise serializers.ValidationError(
                 'Имя пользователя должно содержать'
                 'только буквы, цифры и подчеркивания.'
             )
-        if User.objects.filter(username=value).exclude(pk=self.instance.pk if self.instance else None).exists():
+        if value == 'me':
             raise serializers.ValidationError(
-                'Пользователь с таким именем пользователя уже существует.'
+                'Имя пользователя "me" недопустимо.'
             )
         return value
 
     def validate(self, data):
         username = data.get('username')
         email = data.get('email')
-        role = data.get('role', None)
-        
+
         if User.objects.filter(username=username).exists():
             raise serializers.ValidationError(
                 'Пользователь с таким именем пользователя уже существует.'
@@ -53,11 +53,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 'Пользователь с таким email уже существует.'
             )
-        if self.instance and role and self.instance.role == 'user' and role == 'moderator':
-            raise serializers.ValidationError(
-                'Нельзя изменить роль с "user" на "moderator".'
-            )
-        return data    
+        return data
 
     class Meta:
         model = User
@@ -69,18 +65,6 @@ class UserCreateSerializer(serializers.ModelSerializer):
 
 class UserDisplaySerializer(serializers.ModelSerializer):
     """Сериализатор для отображения пользователей."""
-
-    username = serializers.CharField(
-        required=True,
-        max_length=USERNAME_LENGTH,
-        validators=[
-            RegexValidator(
-                regex=r'^[\w.@+-]+$',
-                message='Имя пользователя должно'
-                'соответствовать паттерну ^[\\w.@+-]+$.'
-            )
-        ]
-    )
 
     class Meta:
         model = User
@@ -118,10 +102,11 @@ class SignUpSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 'Имя пользователя или email уже используются.'
             )
-        confirmation_code = default_token_generator.make_token(user)
+        user.confirmation_code = default_token_generator.make_token(user)
+        user.save()
         send_mail(
             subject='Код подтверждения',
-            message=f'Ваш код подтверждения: {confirmation_code}',
+            message=f'Ваш код подтверждения: {user.confirmation_code}',
             from_email=DEFAULT_FROM_EMAIL,
             recipient_list=[user.email]
         )
@@ -149,7 +134,7 @@ class TokenSerializer(serializers.Serializer):
         user = get_object_or_404(User, username=data['username'])
         if user.confirmation_code != data['confirmation_code']:
             raise serializers.ValidationError('Неверный код подтерждения')
-        return RefreshToken.for_user(user).access_token
+        return data
 
     class Meta:
         model = User

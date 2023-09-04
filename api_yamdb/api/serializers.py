@@ -122,7 +122,7 @@ class TitlePostSerializer(serializers.ModelSerializer):
         return representation
       
     def validate_year(self, data):
-        actual_year = datetime.date.today().year
+        actual_year = datetime.today().year
         if int(self.initial_data['year']) > actual_year:
             raise serializers.ValidationError('некорректный формат года!')
         elif int(self.initial_data['year']) < 0:
