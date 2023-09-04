@@ -60,7 +60,9 @@ class ReviewCommentSerializer(serializers.ModelSerializer):
                 title=self.context['view'].kwargs['title_id']
         ).exists():
             return data
-        raise rest_framework.exceptions.NotFound('{detail: title or review not found.}')
+        raise rest_framework.exceptions.NotFound(
+            '{detail: title or review not found.}'
+        )
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -118,9 +120,11 @@ class TitlePostSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         representation['category'] = CategorySerializer(instance.category).data
-        representation['genre'] = [GenreSerializer(genre).data for genre in instance.genre.all()]
+        representation['genre'] = [
+            GenreSerializer(genre).data for genre in instance.genre.all()
+        ]
         return representation
-      
+
     def validate_year(self, data):
         actual_year = datetime.today().year
         if int(self.initial_data['year']) > actual_year:
