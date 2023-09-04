@@ -1,12 +1,11 @@
+from datetime import datetime
+
+import rest_framework.exceptions
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.relations import SlugRelatedField
 
 from reviews.models import Category, Genre, Review, ReviewComment, Title
-
-
-class ValidationErrorNotFound(serializers.ValidationError):
-    status_code = 404
 
 
 class ReviewPostSerializer(serializers.ModelSerializer):
@@ -61,7 +60,9 @@ class ReviewCommentSerializer(serializers.ModelSerializer):
                 title=self.context['view'].kwargs['title_id']
         ).exists():
             return data
-        return ValidationErrorNotFound('{detail: title or review not found.}')
+        raise rest_framework.exceptions.NotFound(
+            '{detail: title or review not found.}'
+        )
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -90,7 +91,7 @@ class TitleGetSerializer(serializers.ModelSerializer):
         read_only=True,
         many=True
     )
-    rating = serializers.IntegerField(read_only=True)
+    rating = serializers.FloatField(read_only=True)
 
     class Meta:
         fields = ('id', 'name', 'year', 'rating', 'description',
@@ -115,3 +116,19 @@ class TitlePostSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'year', 'description',
                   'genre', 'category')
         model = Title
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['category'] = CategorySerializer(instance.category).data
+        representation['genre'] = [
+            GenreSerializer(genre).data for genre in instance.genre.all()
+        ]
+        return representation
+
+    def validate_year(self, data):
+        actual_year = datetime.today().year
+        if int(self.initial_data['year']) > actual_year:
+            raise serializers.ValidationError('некорректный формат года!')
+        elif int(self.initial_data['year']) < 0:
+            raise serializers.ValidationError('некорректный формат года!')
+        return data

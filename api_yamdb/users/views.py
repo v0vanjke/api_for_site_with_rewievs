@@ -35,22 +35,22 @@ class TokenView(APIView):
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
-    permission_classes = (IsOwnerOrIsAdmin, )
+    permission_classes = (IsOwnerOrIsAdmin,)
     lookup_field = 'username'
     filter_backends = (filters.SearchFilter,)
     search_fields = ('username',)
 
     def get_serializer_class(self):
-        if self.action == 'create':
-            return UserCreateSerializer
-        return UserDisplaySerializer
+        if self.action == 'retrieve':
+            return UserDisplaySerializer
+        return UserCreateSerializer
 
     def update(self, request, *args, **kwargs):
         return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def partial_update(self, request, *args, **kwargs):
         instance = self.get_object()
-        serializer = UserDisplaySerializer(
+        serializer = self.get_serializer(
             instance,
             data=request.data,
             partial=True
@@ -73,6 +73,7 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         serializer = self.get_serializer(user, data=request.data, partial=True)
+        print(serializer)
         serializer.is_valid(raise_exception=True)
 
         serializer.save(role=user.role)
