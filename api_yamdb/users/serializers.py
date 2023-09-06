@@ -82,7 +82,7 @@ class SignUpSerializer(serializers.Serializer):
         if not re.match(r'^[a-zA-Z0-9_]+$', value):
             raise serializers.ValidationError(
                 'Имя пользователя должно содержать'
-                'только буквы, цифры и подчеркивания.'
+                'только латинские буквы, цифры и подчеркивания.'
             )
         if value == 'me':
             raise serializers.ValidationError(

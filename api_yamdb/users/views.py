@@ -1,6 +1,6 @@
 from django.contrib.auth.tokens import default_token_generator
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, status, viewsets
+from rest_framework import filters, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -41,7 +41,7 @@ class UserViewSet(viewsets.ModelViewSet):
     search_fields = ('username',)
 
     def get_serializer_class(self):
-        if self.action == 'retrieve':
+        if self.request.method in permissions.SAFE_METHODS:
             return UserDisplaySerializer
         return UserCreateSerializer
 
@@ -56,7 +56,7 @@ class UserViewSet(viewsets.ModelViewSet):
             partial=True
         )
         serializer.is_valid(raise_exception=True)
-        serializer.save(role=instance.role)
+        serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(
@@ -68,15 +68,14 @@ class UserViewSet(viewsets.ModelViewSet):
     def me(self, request):
         user = self.request.user
 
-        if request.method == 'GET':
+        if self.request.method == 'GET':
             serializer = self.get_serializer(user)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
         serializer = self.get_serializer(user, data=request.data, partial=True)
-        print(serializer)
         serializer.is_valid(raise_exception=True)
 
-        serializer.save(role=user.role)
+        serializer.save(role=request.user.role)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
