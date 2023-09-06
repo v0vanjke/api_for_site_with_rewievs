@@ -111,9 +111,10 @@ class TitlePostSerializer(serializers.ModelSerializer):
         slug_field='slug',
         many=True
     )
+    rating = serializers.IntegerField(read_only=True, default=0)
 
     class Meta:
-        fields = ('id', 'name', 'year', 'description',
+        fields = ('id', 'name', 'year', 'rating', 'description',
                   'genre', 'category')
         model = Title
 
