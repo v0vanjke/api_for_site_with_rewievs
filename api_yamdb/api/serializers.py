@@ -19,8 +19,7 @@ class ReviewPostSerializer(serializers.ModelSerializer):
 
     def validate_score(self, score):
         if score not in range(1, 11):
-            raise ValidationError(
-                'Оценка должна быть целым значением от 1 до 10.')
+            raise ValidationError()
         return score
 
     def validate(self, data):
@@ -129,7 +128,7 @@ class TitlePostSerializer(serializers.ModelSerializer):
     def validate_year(self, data):
         actual_year = datetime.today().year
         if int(self.initial_data['year']) > actual_year:
-            raise serializers.ValidationError('некорректный формат года!')
+            raise serializers.ValidationError('Значение не может быть больше текущего года.')
         elif int(self.initial_data['year']) < 0:
-            raise serializers.ValidationError('некорректный формат года!')
+            raise serializers.ValidationError('Значение не может быть меньше 0.')
         return data

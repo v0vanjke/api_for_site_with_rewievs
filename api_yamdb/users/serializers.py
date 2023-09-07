@@ -1,15 +1,16 @@
 import re
 
+import rest_framework.exceptions
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.core.validators import RegexValidator
 from django.db import IntegrityError
-from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
 from api_yamdb.settings import DEFAULT_FROM_EMAIL
 from reviews.models import EMAIL_LENGTH, USERNAME_LENGTH
 from users.models import User
+from users.validators import validate_username
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -29,16 +30,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(required=True, max_length=EMAIL_LENGTH)
 
     def validate_username(self, value):
-        if not re.match(r'^[a-zA-Z0-9_]+$', value):
-            raise serializers.ValidationError(
-                'Имя пользователя должно содержать'
-                'только буквы, цифры и подчеркивания.'
-            )
-        if value == 'me':
-            raise serializers.ValidationError(
-                'Имя пользователя "me" недопустимо.'
-            )
-        return value
+        return validate_username(value)
 
     def validate(self, data):
         username = data.get('username')
@@ -79,16 +71,7 @@ class SignUpSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True, max_length=EMAIL_LENGTH)
 
     def validate_username(self, value):
-        if not re.match(r'^[a-zA-Z0-9_]+$', value):
-            raise serializers.ValidationError(
-                'Имя пользователя должно содержать'
-                'только латинские буквы, цифры и подчеркивания.'
-            )
-        if value == 'me':
-            raise serializers.ValidationError(
-                'Имя пользователя "me" недопустимо.'
-            )
-        return value
+        return validate_username(value)
 
     def create(self, validated_data):
         username = validated_data['username']
@@ -130,15 +113,32 @@ class TokenSerializer(serializers.Serializer):
     username = serializers.CharField(required=True, max_length=USERNAME_LENGTH)
     confirmation_code = serializers.CharField(required=True)
 
-    def validate(self, data):
-        user = get_object_or_404(User, username=data['username'])
-        if user.confirmation_code != data['confirmation_code']:
-            raise serializers.ValidationError('Неверный код подтерждения')
-        return data
+    def validate_username(self, username):
+        if username is None:
+            raise serializers.ValidationError('Поле username обязательно для заполнения.')
+        if not re.match(r'^[a-zA-Z0-9_]+$', username):
+            raise serializers.ValidationError(
+                'Имя пользователя должно содержать'
+                'только латинские буквы, цифры и подчеркивания.'
+            )
+        if User.objects.filter(username=self.initial_data['username']).exists():
+            return username
+        raise rest_framework.exceptions.NotFound('Пользователь не найден.')
+
+    def validate_confirmation_code(self, data):
+        username = self.initial_data.get('username')
+        if User.objects.filter(username=username).exists():
+            user = User.objects.get(username=username)
+            if user.confirmation_code != self.initial_data['confirmation_code']:
+                raise serializers.ValidationError('Неверный код подтверждения.')
+            return data
+        raise serializers.ValidationError(
+            f'Код подтверждения для пользователя {username} отсутствует.'
+        )
 
     class Meta:
         model = User
         fields = (
             'username',
-            'confirmation_code'
+            'confirmation_code',
         )

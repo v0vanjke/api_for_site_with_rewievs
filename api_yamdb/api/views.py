@@ -5,13 +5,13 @@ from rest_framework import filters, mixins, permissions, viewsets
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from reviews.models import Category, Genre, Review, Title
 from api.filters import FilterTitle
 from api.permissions import IsAdminOrReadOnly, IsOwnerOrIsAdminOrIsModerator
 from api.serializers import (CategorySerializer, GenreSerializer,
                              ReviewCommentSerializer, ReviewPostSerializer,
                              ReviewSerializer, TitleGetSerializer,
                              TitlePostSerializer)
+from reviews.models import Category, Genre, Review, Title
 
 
 class ReviewViewSet(viewsets.ModelViewSet):
@@ -91,7 +91,6 @@ class GenreViewSet(GenreCategoryViewSet):
     lookup_field = 'slug'
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     permission_classes = [IsAdminOrReadOnly]
-
 
 class TitleViewSet(viewsets.ModelViewSet):
     queryset = (

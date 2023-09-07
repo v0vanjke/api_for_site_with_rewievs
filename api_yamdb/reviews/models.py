@@ -1,12 +1,12 @@
-from datetime import datetime
-
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from users.models import User
+from reviews.validators import current_year
 
 USERNAME_LENGTH = 150
 EMAIL_LENGTH = 254
+MIN_YEAR = 0
 
 
 class Genre(models.Model):
@@ -45,9 +45,11 @@ class Title(models.Model):
     )
     year = models.PositiveSmallIntegerField(
         db_index=True,
-        validators=[MaxValueValidator(datetime.now().year),
-                    MinValueValidator(0)],
         verbose_name='Год',
+        validators=[
+            MinValueValidator(MIN_YEAR),
+            MaxValueValidator(current_year),
+        ]
     )
     description = models.TextField(
         blank=True, null=True, max_length=200, verbose_name='Описание',
