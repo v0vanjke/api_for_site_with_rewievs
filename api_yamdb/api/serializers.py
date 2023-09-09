@@ -19,8 +19,7 @@ class ReviewPostSerializer(serializers.ModelSerializer):
 
     def validate_score(self, score):
         if score not in range(1, 11):
-            raise ValidationError(
-                'Оценка должна быть целым значением от 1 до 10.')
+            raise ValidationError()
         return score
 
     def validate(self, data):
@@ -54,16 +53,6 @@ class ReviewCommentSerializer(serializers.ModelSerializer):
         fields = ('id', 'text', 'author', 'pub_date')
         model = ReviewComment
 
-    def validate(self, data):
-        if Review.objects.filter(
-                author=self.context['request'].user,
-                title=self.context['view'].kwargs['title_id']
-        ).exists():
-            return data
-        raise rest_framework.exceptions.NotFound(
-            '{detail: title or review not found.}'
-        )
-
 
 class CategorySerializer(serializers.ModelSerializer):
     """Сериализатор для категории произведения."""
@@ -85,7 +74,6 @@ class GenreSerializer(serializers.ModelSerializer):
 
 class TitleGetSerializer(serializers.ModelSerializer):
     """Сериализатор для получения данных о произведении."""
-
     category = CategorySerializer(read_only=True)
     genre = GenreSerializer(
         read_only=True,
@@ -129,7 +117,7 @@ class TitlePostSerializer(serializers.ModelSerializer):
     def validate_year(self, data):
         actual_year = datetime.today().year
         if int(self.initial_data['year']) > actual_year:
-            raise serializers.ValidationError('некорректный формат года!')
+            raise serializers.ValidationError('Значение не может быть больше текущего года.')
         elif int(self.initial_data['year']) < 0:
-            raise serializers.ValidationError('некорректный формат года!')
+            raise serializers.ValidationError('Значение не может быть меньше 0.')
         return data

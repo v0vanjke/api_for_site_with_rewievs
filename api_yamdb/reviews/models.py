@@ -1,12 +1,12 @@
-from datetime import datetime
-
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from users.models import User
+from reviews.validators import current_year
 
 USERNAME_LENGTH = 150
 EMAIL_LENGTH = 254
+MIN_YEAR = 0
 
 
 class Genre(models.Model):
@@ -45,15 +45,18 @@ class Title(models.Model):
     )
     year = models.PositiveSmallIntegerField(
         db_index=True,
-        validators=[MaxValueValidator(datetime.now().year),
-                    MinValueValidator(0)],
         verbose_name='Год',
+        validators=[
+            MinValueValidator(MIN_YEAR),
+            MaxValueValidator(current_year),
+        ]
     )
     description = models.TextField(
-        blank=True, null=True, max_length=200, verbose_name='Описание',
+        blank=True, max_length=200, verbose_name='Описание',
     )
     genre = models.ManyToManyField(
         Genre, blank=True, verbose_name='Жанр', related_name='titles',
+        through='GenreTitle'
     )
     category = models.ForeignKey(
         Category, blank=True, null=True,
@@ -137,3 +140,17 @@ class ReviewComment(models.Model):
             f'Комментарий пользователя {self.author}'
             f' к отзыву {self.review}.'
         )
+
+
+class GenreTitle(models.Model):
+    title = models.ForeignKey(
+        Title, on_delete=models.CASCADE)
+    genre = models.ForeignKey(
+        Genre, on_delete=models.CASCADE, verbose_name='Жанры')
+
+    def __str__(self):
+        return f'{self.title} {self.genre}'
+
+    class Meta:
+        verbose_name = 'Жанр'
+        verbose_name_plural = 'Жанры'

@@ -1,15 +1,16 @@
 import re
 
+import rest_framework.exceptions
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from django.core.validators import RegexValidator
 from django.db import IntegrityError
-from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
 from api_yamdb.settings import DEFAULT_FROM_EMAIL
 from reviews.models import EMAIL_LENGTH, USERNAME_LENGTH
 from users.models import User
+from users.validators import validate_username
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -29,30 +30,31 @@ class UserCreateSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(required=True, max_length=EMAIL_LENGTH)
 
     def validate_username(self, value):
-        if not re.match(r'^[a-zA-Z0-9_]+$', value):
-            raise serializers.ValidationError(
-                'Имя пользователя должно содержать'
-                'только буквы, цифры и подчеркивания.'
-            )
-        if value == 'me':
-            raise serializers.ValidationError(
-                'Имя пользователя "me" недопустимо.'
-            )
-        return value
+        return validate_username(value)
 
     def validate(self, data):
         username = data.get('username')
         email = data.get('email')
-
-        if User.objects.filter(username=username).exists():
-            raise serializers.ValidationError(
-                'Пользователь с таким именем пользователя уже существует.'
-            )
-
-        if User.objects.filter(email=email).exists():
-            raise serializers.ValidationError(
-                'Пользователь с таким email уже существует.'
-            )
+        try:
+            path_username = self.context['view'].kwargs['username']
+            user = User.objects.get(username=path_username)
+            if username != user.username and User.objects.filter(username=username).exists():
+                raise serializers.ValidationError(
+                    {'username': ['Пользователь с таким username уже существует.']}
+                )
+            if email != user.email and User.objects.filter(email=email).exists():
+                raise serializers.ValidationError(
+                    {'email': ['Пользователь с таким email уже существует.']}
+                )
+        except KeyError:
+            if User.objects.filter(username=username).exists():
+                raise serializers.ValidationError(
+                    {'username': ['Пользователь с таким username уже существует.']}
+                )
+            if User.objects.filter(email=email).exists():
+                raise serializers.ValidationError(
+                    {'email': ['Пользователь с таким email уже существует.']}
+                )
         return data
 
     class Meta:
@@ -79,16 +81,7 @@ class SignUpSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True, max_length=EMAIL_LENGTH)
 
     def validate_username(self, value):
-        if not re.match(r'^[a-zA-Z0-9_]+$', value):
-            raise serializers.ValidationError(
-                'Имя пользователя должно содержать'
-                'только латинские буквы, цифры и подчеркивания.'
-            )
-        if value == 'me':
-            raise serializers.ValidationError(
-                'Имя пользователя "me" недопустимо.'
-            )
-        return value
+        return validate_username(value)
 
     def create(self, validated_data):
         username = validated_data['username']
@@ -99,9 +92,15 @@ class SignUpSerializer(serializers.Serializer):
                 email=email
             )
         except IntegrityError:
-            raise serializers.ValidationError(
-                'Имя пользователя или email уже используются.'
-            )
+            if User.objects.filter(username=username) and User.objects.filter(email=email):
+                raise serializers.ValidationError({'username': ['уже используeтся'],
+                                                   'email': ['уже используется']})
+            user = User.objects.filter(username=username).first()
+            if user and user.email != email:
+                raise serializers.ValidationError({'username': ['уже используeтся']})
+            user = User.objects.filter(email=email).first()
+            if user and user.username != username:
+                raise serializers.ValidationError({'email': [f'{email} уже используется']})
         user.confirmation_code = default_token_generator.make_token(user)
         user.save()
         send_mail(
@@ -115,12 +114,7 @@ class SignUpSerializer(serializers.Serializer):
     def update(self, instance, validated_data):
         instance.username = validated_data.get('username', instance.username)
         instance.email = validated_data.get('email', instance.email)
-        try:
-            instance.save()
-        except IntegrityError:
-            raise serializers.ValidationError(
-                'Имя пользователя или email уже используются.'
-            )
+        instance.save()
         return instance
 
 
@@ -130,15 +124,32 @@ class TokenSerializer(serializers.Serializer):
     username = serializers.CharField(required=True, max_length=USERNAME_LENGTH)
     confirmation_code = serializers.CharField(required=True)
 
-    def validate(self, data):
-        user = get_object_or_404(User, username=data['username'])
-        if user.confirmation_code != data['confirmation_code']:
-            raise serializers.ValidationError('Неверный код подтерждения')
-        return data
+    def validate_username(self, username):
+        if username is None:
+            raise serializers.ValidationError('Поле username обязательно для заполнения.')
+        if not re.match(r'^[\w.@+-]+$', username):
+            raise serializers.ValidationError(
+                'Имя пользователя должно содержать'
+                'только латинские буквы, цифры и подчеркивания.'
+            )
+        if User.objects.filter(username=self.initial_data['username']).exists():
+            return username
+        raise rest_framework.exceptions.NotFound('Пользователь не найден.')
+
+    def validate_confirmation_code(self, data):
+        username = self.initial_data.get('username')
+        if User.objects.filter(username=username).exists():
+            user = User.objects.get(username=username)
+            if user.confirmation_code != self.initial_data['confirmation_code']:
+                raise serializers.ValidationError('Неверный код подтверждения.')
+            return data
+        raise serializers.ValidationError(
+            f'Код подтверждения для пользователя {username} отсутствует.'
+        )
 
     class Meta:
         model = User
         fields = (
             'username',
-            'confirmation_code'
+            'confirmation_code',
         )
