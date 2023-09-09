@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import AccessToken
 
-from api.permissions import IsOwnerOrIsAdmin
+from api.permissions import IsOwnerOrIsAdmin, IsAdminOrIsSuperuser
 from users.models import User
 from users.serializers import (SignUpSerializer, TokenSerializer,
                                UserCreateSerializer, UserDisplaySerializer)
@@ -35,7 +35,7 @@ class TokenView(APIView):
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
-    permission_classes = (IsOwnerOrIsAdmin,)
+    permission_classes = (IsAdminOrIsSuperuser,)
     lookup_field = 'username'
     filter_backends = (filters.SearchFilter,)
     search_fields = ('username',)

@@ -35,16 +35,26 @@ class UserCreateSerializer(serializers.ModelSerializer):
     def validate(self, data):
         username = data.get('username')
         email = data.get('email')
-
-        if User.objects.filter(username=username).exists():
-            raise serializers.ValidationError(
-                'Пользователь с таким именем пользователя уже существует.'
-            )
-
-        if User.objects.filter(email=email).exists():
-            raise serializers.ValidationError(
-                'Пользователь с таким email уже существует.'
-            )
+        try:
+            path_username = self.context['view'].kwargs['username']
+            user = User.objects.get(username=path_username)
+            if username != user.username and User.objects.filter(username=username).exists():
+                raise serializers.ValidationError(
+                    {'username': ['Пользователь с таким username уже существует.']}
+                )
+            if email != user.email and User.objects.filter(email=email).exists():
+                raise serializers.ValidationError(
+                    {'email': ['Пользователь с таким email уже существует.']}
+                )
+        except KeyError:
+            if User.objects.filter(username=username).exists():
+                raise serializers.ValidationError(
+                    {'username': ['Пользователь с таким username уже существует.']}
+                )
+            if User.objects.filter(email=email).exists():
+                raise serializers.ValidationError(
+                    {'email': ['Пользователь с таким email уже существует.']}
+                )
         return data
 
     class Meta:
@@ -82,9 +92,15 @@ class SignUpSerializer(serializers.Serializer):
                 email=email
             )
         except IntegrityError:
-            raise serializers.ValidationError(
-                'Имя пользователя или email уже используются.'
-            )
+            if User.objects.filter(username=username) and User.objects.filter(email=email):
+                raise serializers.ValidationError({'username': ['уже используeтся'],
+                                                   'email': ['уже используется']})
+            user = User.objects.filter(username=username).first()
+            if user and user.email != email:
+                raise serializers.ValidationError({'username': ['уже используeтся']})
+            user = User.objects.filter(email=email).first()
+            if user and user.username != username:
+                raise serializers.ValidationError({'email': [f'{email} уже используется']})
         user.confirmation_code = default_token_generator.make_token(user)
         user.save()
         send_mail(
@@ -98,12 +114,7 @@ class SignUpSerializer(serializers.Serializer):
     def update(self, instance, validated_data):
         instance.username = validated_data.get('username', instance.username)
         instance.email = validated_data.get('email', instance.email)
-        try:
-            instance.save()
-        except IntegrityError:
-            raise serializers.ValidationError(
-                'Имя пользователя или email уже используются.'
-            )
+        instance.save()
         return instance
 
 

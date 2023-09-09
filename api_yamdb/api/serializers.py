@@ -53,16 +53,6 @@ class ReviewCommentSerializer(serializers.ModelSerializer):
         fields = ('id', 'text', 'author', 'pub_date')
         model = ReviewComment
 
-    def validate(self, data):
-        if Review.objects.filter(
-                author=self.context['request'].user,
-                title=self.context['view'].kwargs['title_id']
-        ).exists():
-            return data
-        raise rest_framework.exceptions.NotFound(
-            '{detail: title or review not found.}'
-        )
-
 
 class CategorySerializer(serializers.ModelSerializer):
     """Сериализатор для категории произведения."""
@@ -84,7 +74,6 @@ class GenreSerializer(serializers.ModelSerializer):
 
 class TitleGetSerializer(serializers.ModelSerializer):
     """Сериализатор для получения данных о произведении."""
-
     category = CategorySerializer(read_only=True)
     genre = GenreSerializer(
         read_only=True,
