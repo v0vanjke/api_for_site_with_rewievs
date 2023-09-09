@@ -116,7 +116,7 @@ class TokenSerializer(serializers.Serializer):
     def validate_username(self, username):
         if username is None:
             raise serializers.ValidationError('Поле username обязательно для заполнения.')
-        if not re.match(r'^[a-zA-Z0-9_]+$', username):
+        if not re.match(r'^[\w.@+-]+$', username):
             raise serializers.ValidationError(
                 'Имя пользователя должно содержать'
                 'только латинские буквы, цифры и подчеркивания.'
