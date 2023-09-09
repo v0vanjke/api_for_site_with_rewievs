@@ -1,6 +1,5 @@
 from datetime import datetime
 
-import rest_framework.exceptions
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.relations import SlugRelatedField
@@ -74,6 +73,7 @@ class GenreSerializer(serializers.ModelSerializer):
 
 class TitleGetSerializer(serializers.ModelSerializer):
     """Сериализатор для получения данных о произведении."""
+
     category = CategorySerializer(read_only=True)
     genre = GenreSerializer(
         read_only=True,
@@ -117,7 +117,11 @@ class TitlePostSerializer(serializers.ModelSerializer):
     def validate_year(self, data):
         actual_year = datetime.today().year
         if int(self.initial_data['year']) > actual_year:
-            raise serializers.ValidationError('Значение не может быть больше текущего года.')
+            raise serializers.ValidationError(
+                'Значение не может быть больше текущего года.'
+            )
         elif int(self.initial_data['year']) < 0:
-            raise serializers.ValidationError('Значение не может быть меньше 0.')
+            raise serializers.ValidationError(
+                'Значение не может быть меньше 0.'
+            )
         return data

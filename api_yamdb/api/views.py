@@ -92,6 +92,7 @@ class GenreViewSet(GenreCategoryViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     permission_classes = [IsAdminOrReadOnly]
 
+
 class TitleViewSet(viewsets.ModelViewSet):
     queryset = (
         Title.objects
