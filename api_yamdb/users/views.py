@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import AccessToken
 
-from api.permissions import IsOwnerOrIsAdmin, IsAdminOrIsSuperuser
+from api.permissions import IsAdminOrIsSuperuser
 from users.models import User
 from users.serializers import (SignUpSerializer, TokenSerializer,
                                UserCreateSerializer, UserDisplaySerializer)
